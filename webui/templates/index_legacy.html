@@ -1,0 +1,3632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GPT 注册控制台</title>
+  <style>
+    * { box-sizing: border-box; }
+    html { max-width: 100%; overflow-x: hidden; }
+    :root {
+      --bg: #eef3f8; --surface: #ffffff; --soft: #f7f9fc; --text: #172033;
+      --muted: #667085; --line: #d9e2ec; --blue: #2563eb; --green: #16803c;
+      --red: #c2413a; --amber: #b7791f;
+      --page-max-width: 1500px;
+      --page-gutter: 16px;
+    }
+    body {
+      margin: 0; max-width: 100%; overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    body.modal-open { overflow: hidden; position: fixed; left: 0; right: 0; width: 100%; }
+    h1, h2, h3, p { margin: 0; }
+    header {
+      width: 100%; max-width: 100%; overflow: hidden;
+      padding: 18px 0; background: #101827; color: #fff; text-align: center;
+    }
+    .header-inner {
+      width: calc(100% - var(--page-gutter) * 2); max-width: var(--page-max-width); margin: 0 auto;
+      display: flex; justify-content: center; gap: 28px; align-items: center; flex-wrap: wrap;
+    }
+    header h1 { font-size: 22px; }
+    header .meta { margin-top: 4px; color: #b8c7d9; font-size: 12px; }
+    .header-links { margin-top: 8px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .header-links form { margin: 0; }
+    .header-links a, .header-links button {
+      color: #dbeafe; text-decoration: none; font-size: 12px; font-weight: 800;
+      border: 1px solid rgba(219,234,254,.28); border-radius: 999px; padding: 4px 10px;
+      background: rgba(37,99,235,.18); cursor: pointer; font: inherit; line-height: 1.4;
+    }
+    .header-links a:hover, .header-links button:hover { color: #fff; background: rgba(37,99,235,.36); }
+    .stats { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+    .stat {
+      min-width: 96px; padding: 8px 12px; border: 1px solid rgba(255,255,255,.16);
+      border-radius: 8px; background: rgba(255,255,255,.08);
+    }
+    .stat span { display: block; color: #b8c7d9; font-size: 11px; }
+    .stat strong { display: block; margin-top: 3px; font-size: 18px; }
+    nav {
+      width: 100%; max-width: 100%; overflow: hidden;
+      padding: 0; background: #1b2538;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .nav-inner {
+      width: calc(100% - var(--page-gutter) * 2); max-width: var(--page-max-width); margin: 0 auto;
+      display: flex; justify-content: center; align-items: center; gap: 4px;
+    }
+    nav button {
+      border: none; background: transparent; color: #b8c7d9; font: inherit; font-weight: 700;
+      padding: 12px 18px; cursor: pointer; border-bottom: 3px solid transparent;
+    }
+    nav button:hover { color: #fff; }
+    nav button.active { color: #fff; border-bottom-color: var(--blue); }
+    main { width: calc(100% - var(--page-gutter) * 2); max-width: var(--page-max-width); min-width: 0; margin: 18px auto 44px; display: grid; gap: 18px; }
+    main > div:not(.hidden) { display: grid; gap: 18px; }
+    section.card {
+      min-width: 0; max-width: 100%; overflow: hidden;
+      border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+      box-shadow: 0 8px 22px rgba(15,23,42,.06);
+    }
+    .head { padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--soft); }
+    .head p { margin-top: 4px; color: var(--muted); font-size: 12px; }
+    .body { padding: 16px; }
+    label.fld { display: block; margin-bottom: 14px; font-size: 13px; font-weight: 700; }
+    label.fld .hint { display: block; margin-top: 3px; color: var(--muted); font-weight: 400; font-size: 12px; }
+    input, textarea, select {
+      width: 100%; min-height: 38px; border: 1px solid var(--line); border-radius: 6px;
+      padding: 8px 12px; font: inherit; margin-top: 6px;
+    }
+    textarea { min-height: 120px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; resize: vertical; }
+    .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+    .row > * { flex: 1; min-width: 160px; }
+    .row label.fld { margin-bottom: 0; }
+    .row .action-cell {
+      flex: 0 0 auto; min-width: auto; align-self: flex-end;
+      display: inline-flex; gap: 8px; align-items: center;
+    }
+    .row .action-cell .btn { min-height: 38px; }
+    button.btn {
+      min-height: 38px; border: 1px solid var(--line); border-radius: 7px; background: #fff;
+      padding: 0 14px; font-weight: 800; cursor: pointer; font-size: 13px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
+    }
+    button.btn:hover { background: var(--soft); }
+    button.btn.primary { border-color: var(--blue); background: var(--blue); color: #fff; }
+    button.btn.good { border-color: #2f855a; background: #edf8f1; color: #166534; }
+    button.btn.danger { border-color: #e7a3a0; color: #b3261e; background: #fff; }
+    button.btn:disabled { color: #98a2b3; cursor: not-allowed; background: #f2f4f7; border-color: var(--line); }
+    .toolbar { padding: 14px 16px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .search { flex: 1; min-width: min(420px, 100%); }
+    .search input { margin-top: 0; }
+    .buttons { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .inline-num { display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:12px; font-weight:700; white-space:nowrap; }
+    .inline-num input { width:70px; min-height:38px; margin-top:0; padding:4px 8px; }
+    .table-wrap { overflow: auto; border-top: 1px solid #edf1f5; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid #edf1f5; text-align: left; white-space: nowrap; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; }
+    th { user-select: none; }
+    td.wrap, th.wrap { white-space: normal; word-break: break-word; }
+    td.center, th.center { text-align: center; }
+    .col-check { width: 42px; }
+    .col-id { width: 72px; }
+    .col-status { width: 96px; }
+    .col-email { width: 260px; }
+    .col-source { width: 96px; }
+    .col-token { width: 220px; }
+    .col-note { width: 180px; }
+    .col-small { width: 78px; }
+    .col-plan { width: 82px; }
+    .col-account { width: 180px; }
+    .col-time { width: 168px; }
+    .col-traffic { width: 120px; white-space: nowrap; }
+    .col-expire { width: 168px; }
+    .col-error { width: 320px; }
+    .col-actions { width: 220px; }
+    .jobs-table .col-actions { width: 330px; }
+    .accounts-table .col-token { width: 92px; }
+    .accounts-table .col-password { width: 120px; }
+    .accounts-table .col-plan { width: 340px; }
+    .accounts-table .col-note { width: 180px; }
+    .accounts-table .col-agent { width: 220px; }
+    .accounts-table .col-actions { width: 360px; }
+    .accounts-table td:nth-child(6), .accounts-table th:nth-child(6) { overflow: visible; text-overflow: clip; }
+    .accounts-table td:nth-child(10), .accounts-table th:nth-child(10) { overflow: visible; text-overflow: clip; }
+
+    .accounts-table td:nth-child(8), .accounts-table th:nth-child(8) { overflow: visible; text-overflow: clip; }
+    .accounts-table td:nth-child(11), .accounts-table th:nth-child(11) { overflow: visible; text-overflow: clip; }
+    .outlook-table .col-actions { width: 220px; }
+    .codex-table .col-actions { width: 260px; }
+    th { position: sticky; top: 0; background: #fbfcfe; color: #475467; z-index: 1; font-size: 12px; }
+    tr:hover td { background: #fbfdff; }
+    .main-cell { font-weight: 700; }
+    .sub-cell { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .mono { font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; font-size: 12px; }
+    .muted { color: var(--muted); }
+    .pill { display: inline-flex; min-width: 48px; justify-content: center; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .status-available, .status-pending { color: var(--blue); background: #eef4ff; }
+    .status-used, .status-cancelled, .status-stopped, .status-disabled { color: #475467; background: #f2f4f7; }
+    .status-stopping { color: var(--amber); background: #fff7e6; }
+    .status-failed { color: var(--red); background: #fff0ef; }
+    .status-partial_success { color: #9a6700; background: #fff7d6; }
+    .status-running { color: var(--amber); background: #fff7e6; }
+    .status-success { color: var(--green); background: #e9f7ef; }
+    .extract-link-cell {
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      margin-top: 4px; max-width: 100%;
+    }
+    .extract-link-cell .pill { min-width: auto; padding: 4px 10px; }
+    .extract-link-btn {
+      min-height: 26px; border: 1px solid #cfe7dc; border-radius: 999px;
+      padding: 0 10px; font-size: 12px; font-weight: 800; line-height: 1;
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      cursor: pointer; white-space: nowrap; transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+    }
+    .extract-link-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(22,128,60,.10); }
+    .extract-copy { color: #166534; background: linear-gradient(180deg, #f0fbf5, #e3f5ea); border-color: #b9dfc9; }
+    .extract-qr { color: #1d4ed8; background: linear-gradient(180deg, #f3f7ff, #e8f0ff); border-color: #bdd0ff; }
+    .extract-link-expire {
+      flex-basis: 100%; margin-top: 1px; color: #667085; font-size: 12px;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .extract-link-error {
+      flex-basis: 100%; color: var(--red); font-size: 12px; line-height: 1.35;
+      max-width: 260px; white-space: normal; overflow-wrap: anywhere;
+    }
+    .agent-token-cell { margin-top: 4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .agent-token-cell button { min-height:24px; border:1px solid #b9dfc9; border-radius:999px; background:#f0fbf5; color:#166534; padding:0 9px; font-size:12px; font-weight:800; cursor:pointer; }
+    .agent-token-cell .agent-download { border-color:#bdd0ff; background:#f3f7ff; color:#1d4ed8; }
+    .twofa-action {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 24px; padding: 0 10px; border-radius: 999px;
+      border: 1px solid #b9dfc9; background: #f0fbf5; color: #166534;
+      font-size: 12px; font-weight: 800; line-height: 1; cursor: pointer;
+      white-space: nowrap;
+    }
+    .twofa-action:hover:not(:disabled) { background: #2bb8a6; border-color: #2bb8a6; color: #fff; }
+    .twofa-action:disabled { opacity: .55; cursor: not-allowed; }
+    .twofa-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 24px; padding: 0 10px; border-radius: 999px;
+      border: 1px solid #9ee0d6; background: #E7FCF8; color: #2bb8a6;
+      font-size: 12px; font-weight: 800; line-height: 1; white-space: nowrap;
+    }
+    .twofa-actions { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .twofa-code {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 24px; padding: 0 10px; border-radius: 999px;
+      border: 1px solid #bdd0ff; background: #f3f7ff; color: #1d4ed8;
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 12px; font-weight: 900; line-height: 1; letter-spacing: .08em;
+      white-space: nowrap;
+    }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .jobs-table td.actions-cell { text-align: center; vertical-align: middle; overflow: visible; }
+    .job-actions { justify-content: center; flex-wrap: nowrap; width: 100%; }
+    .job-actions button { flex: 0 0 auto; }
+    .actions button { min-height: 30px; border: 1px solid var(--line); border-radius: 6px; background: #fff; padding: 0 10px; font-weight: 800; cursor: pointer; font-size: 12px; line-height: 1; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
+    .actions button.primary { border-color: var(--blue); background: var(--blue); color: #fff; }
+    .actions button.good { border-color: #2f855a; background: #edf8f1; color: #166534; }
+    .actions button.danger { border-color: #e7a3a0; color: #b3261e; background: #fff; }
+
+    /* 账号列表紧凑布局 */
+    .accounts-toolbar {
+      display: grid; gap: 10px; align-items: stretch; padding: 12px 16px;
+      grid-template-columns: 1fr;
+    }
+    .accounts-topbar { display: flex; gap: 12px; align-items: center; justify-content: flex-start; min-width: 0; flex-wrap: wrap; }
+    .accounts-toolbar .search { flex: 0 1 400px; min-width: 240px; max-width: 400px; }
+    .account-filter-strip { display: inline-flex; align-items: center; justify-content: flex-start; gap: 8px; flex-wrap: wrap; }
+    .selected-hint { font-size: 12px; font-weight: 800; padding: 0 6px; white-space: nowrap; }
+    .accounts-actionbar {
+      display: flex; align-items: stretch; justify-content: flex-start; gap: 8px; flex-wrap: wrap;
+      padding-top: 2px;
+    }
+    .btn-group {
+      display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      padding: 6px; border: 1px solid #e6edf5; border-radius: 12px;
+      background: linear-gradient(180deg, #fbfdff, #f7faff);
+      box-shadow: 0 1px 0 rgba(15,23,42,.02);
+    }
+    .btn-group-title { color: #667085; font-size: 12px; font-weight: 900; padding: 0 4px; white-space: nowrap; }
+    .toolbar-sep { display: none; }
+    .accounts-toolbar button.btn { min-height: 32px; padding: 0 10px; font-size: 12px; border-radius: 8px; }
+    .accounts-toolbar .inline-num {
+      min-height: 32px; padding: 0 9px; border: 1px solid #e5edf6; border-radius: 999px;
+      background: #fff; color: #5f6f86;
+    }
+    .accounts-toolbar .inline-num input[type="number"] { width: 56px; min-height: 26px; padding: 2px 6px; border-radius: 7px; }
+    .accounts-toolbar .inline-num input[type="checkbox"] { margin: 0; }
+    .accounts-table { font-size: 12px; }
+    .accounts-table th, .accounts-table td { padding: 7px 8px; }
+    .accounts-table .col-check { width: 34px; }
+    .accounts-table .col-id { width: 52px; }
+    .accounts-table .col-email { width: 320px; }
+    .accounts-table .col-source { width: 80px; }
+    .accounts-table .col-token { width: 92px; }
+    .accounts-table .col-password { width: 120px; }
+    .accounts-table .col-plan { width: 300px; }
+    .accounts-table .col-note { width: 150px; }
+    .accounts-table .col-small { width: 168px; }
+    .accounts-table .col-status { width: 88px; }
+    .accounts-table .col-agent { width: 220px; }
+    .accounts-table .col-time { width: 170px; }
+    .accounts-table .col-actions { width: 380px; }
+    .accounts-table .main-cell { font-size: 12px; }
+    .accounts-table .sub-cell { margin-top: 1px; font-size: 11px; }
+    .accounts-table .account-email-cell {
+      white-space: normal; overflow: visible; text-overflow: clip; vertical-align: middle;
+    }
+    .accounts-table .account-email-cell .main-cell,
+    .accounts-table .account-email-history,
+    .accounts-table .account-email-user,
+    .accounts-table .account-email-status {
+      white-space: normal; overflow: visible; text-overflow: clip;
+      overflow-wrap: anywhere; word-break: break-word; line-height: 1.35;
+    }
+    .accounts-table .account-email-history,
+    .accounts-table .account-email-user,
+    .accounts-table .account-email-status { margin-top: 2px; font-size: 11px; }
+    .accounts-table .account-email-history { color: var(--muted); }
+    .accounts-table .account-email-user { color: #475467; }
+    .accounts-table .account-email-status { color: #b54708; }
+    .accounts-table .mono { font-size: 11px; }
+    .accounts-table .pill { min-width: auto; padding: 2px 6px; font-size: 11px; }
+    .accounts-table .actions { gap: 4px; }
+    .accounts-table .actions button { min-height: 24px; padding: 0 7px; font-size: 11px; border-radius: 5px; transition: transform .12s ease, box-shadow .12s ease, background .12s ease; }
+
+    .account-row-actions {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start; gap: 5px; width: 100%;
+    }
+    .account-action-group {
+      display: flex; align-items: center; align-content: flex-start; gap: 4px; flex-wrap: wrap;
+      padding: 3px; border: 1px solid #edf1f5; border-radius: 8px; background: #fbfdff;
+    }
+    .account-action-group button { flex: 1 1 auto; white-space: nowrap; }
+    .account-action-group.danger-zone { background: #fffafa; border-color: #f4d8d6; }
+    .account-action-group button { box-shadow: 0 1px 0 rgba(15,23,42,.03); }
+    .account-action-group button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(15,23,42,.08); }
+    .account-action-group .primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+    .account-action-group .good { background: #edf8f1; border-color: #b9dfc9; color: #166534; }
+    .accounts-table .extract-link-cell { gap: 4px; margin-top: 3px; }
+    .accounts-table .extract-link-btn, .accounts-table .agent-token-cell button { min-height: 22px; padding: 0 7px; font-size: 11px; }
+    .accounts-table .agent-token-cell { gap: 4px; margin-top: 2px; }
+    .accounts-table .extract-link-expire, .accounts-table .extract-link-error { font-size: 11px; }
+    @media (max-width: 900px) {
+      .accounts-topbar { align-items: stretch; flex-direction: column; }
+      .accounts-toolbar .search { max-width: none; flex-basis: auto; }
+      .account-filter-strip, .accounts-actionbar { justify-content: flex-start; }
+      .toolbar-sep { display: none; }
+      .account-row-actions { grid-template-columns: 1fr; }
+    }
+    .banner { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; }
+    .banner.warn { background: #fff7e6; color: #92600a; border: 1px solid #f3d99b; }
+    .banner.info { background: #eef4ff; color: #1d4ed8; border: 1px solid #c3d4fb; }
+    .log {
+      margin-top: 8px; background: #0c1322; color: #cbd5e1; border-radius: 6px; padding: 12px;
+      font-family: ui-monospace, Consolas, monospace; font-size: 12px;
+      white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;
+      width: 100%; max-width: 100%; min-width: 0;
+      max-height: 320px; overflow: auto; line-height: 1.5;
+    }
+    #logPanel, #retryLogPanel, #liveLogPanel, #totpLogPanel, #emailChangeLogPanel, #qrPanel { min-width: 0; max-width: 100%; overflow-x: hidden; }
+    #logPanel:not(.hidden), #retryLogPanel:not(.hidden), #liveLogPanel:not(.hidden), #totpLogPanel:not(.hidden), #emailChangeLogPanel:not(.hidden), #qrPanel:not(.hidden) {
+      position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+      z-index: 1000; display: block; width: min(1100px, calc(100vw - 48px));
+      max-height: min(760px, calc(100vh - 48px)); overflow: hidden;
+      padding: 16px; border: 1px solid var(--line); border-radius: 12px;
+      background: var(--surface); box-shadow: 0 0 0 9999px rgba(15,23,42,.45), 0 24px 70px rgba(15,23,42,.34);
+    }
+    #qrPanel:not(.hidden) { width: min(520px, calc(100vw - 48px)); text-align: center; }
+    #logPanel h3, #retryLogPanel h3, #liveLogPanel h3, #totpLogPanel h3, #emailChangeLogPanel h3, #qrPanel h3 { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    #logPanel h3 .btn, #retryLogPanel h3 .btn, #liveLogPanel h3 .btn, #totpLogPanel h3 .btn, #emailChangeLogPanel h3 .btn, #qrPanel h3 .btn { margin-left:auto; float:none !important; }
+    #logPanel .log, #retryLogPanel .log, #liveLogPanel .log, #totpLogPanel .log, #emailChangeLogPanel .log { max-height: calc(min(760px, calc(100vh - 48px)) - 74px); margin-top:0; }
+    #qrPanel img { display:block; max-width:min(360px, calc(100vw - 96px)); max-height:420px; margin:12px auto; border:1px solid var(--line); border-radius:10px; background:#fff; }
+    #qrPanel .qr-link { display:block; word-break:break-all; white-space:normal; font-size:12px; color:var(--muted); margin-top:8px; }
+    .hidden { display: none !important; }
+    #toast {
+      position: fixed; right: 18px; bottom: 18px; padding: 10px 14px; border-radius: 8px;
+      background: #101827; color: #fff; box-shadow: 0 14px 30px rgba(15,23,42,.24);
+      opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .18s ease, transform .18s ease;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    /* 分页条 */
+    .pager-bar {
+      display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+      border-top: 1px solid var(--line); font-size: 13px; flex-wrap: wrap;
+    }
+    .pager-bar button {
+      min-height: 30px; border: 1px solid var(--line); border-radius: 6px;
+      background: #fff; padding: 0 12px; cursor: pointer; font-size: 12px; font-weight: 700;
+    }
+    .pager-bar button:disabled { color: #98a2b3; cursor: not-allowed; background: #f2f4f7; }
+    .pager-bar button:not(:disabled):hover { background: var(--soft); }
+    .pager-bar .pager-info { color: var(--muted); font-size: 12px; flex: 1; text-align: center; }
+    .pager-bar select {
+      min-height: 30px; width: auto; border: 1px solid var(--line); border-radius: 6px;
+      padding: 4px 8px; font: inherit; font-size: 12px; margin-top: 0;
+    }
+    .config-tabs {
+      display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 14px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--line);
+    }
+    .config-tabs button {
+      border: 1px solid var(--line); background: #fff; color: #475467;
+      border-radius: 999px; min-height: 34px; padding: 0 14px;
+      cursor: pointer; font-weight: 800; font-size: 13px;
+    }
+    .config-tabs button:hover { background: var(--soft); color: var(--text); }
+    .config-tabs button.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .config-panel { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 12px 18px; min-width: 0; }
+    .config-panel h3 { grid-column: 1 / -1; margin: 2px 0 0; }
+    .config-subhead {
+      grid-column: 1 / -1; margin-top: 8px; padding: 9px 12px;
+      border-left: 4px solid var(--blue); border-radius: 6px;
+      background: var(--soft); font-size: 13px; font-weight: 900;
+    }
+    .config-subhead .hint { display:block; margin-top:3px; color:var(--muted); font-size:12px; font-weight:400; line-height:1.45; }
+    .config-subhead.remail-subhead .hint { display: inline; }
+    .config-subhead .remail-promo-notice {
+      display: inline-flex; align-items: center; width: fit-content;
+      margin: 0 0 0 10px; padding: 7px 11px;
+      color: #b42318; background: #fff1f0; border: 1px solid #fecdca;
+      border-radius: 7px; font-size: 12px; font-weight: 800; line-height: 1.4;
+      vertical-align: middle; white-space: nowrap;
+    }
+    .config-subtabs {
+      grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap;
+      padding: 8px; border: 1px solid #edf1f5; border-radius: 8px; background: #fbfcfe;
+    }
+    .config-subtabs button {
+      border: 1px solid var(--line); background: #fff; color: #475467;
+      border-radius: 999px; min-height: 30px; padding: 0 12px;
+      cursor: pointer; font-weight: 800; font-size: 12px;
+    }
+    .config-subtabs button:hover { background: var(--soft); color: var(--text); }
+    .config-subtabs button.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+    .config-panel label.fld {
+      min-width: 0; max-width: 100%; overflow: visible;
+      padding: 10px 12px; border: 1px solid #edf1f5; border-radius: 8px; background: #fff;
+    }
+    .config-panel label.fld > input,
+    .config-panel label.fld > select,
+    .config-panel label.fld > textarea {
+      min-width: 0; max-width: 100%;
+    }
+    .config-panel label.fld .hint {
+      line-height: 1.45; white-space: normal; overflow: visible;
+      overflow-wrap: anywhere; word-break: break-word;
+    }
+    .config-panel label.fld .hint .mono {
+      white-space: normal; overflow-wrap: anywhere; word-break: break-all;
+    }
+    .config-field-wrap { min-width: 0; }
+    .config-field-wrap > label.fld { margin-bottom: 0; }
+    .config-external-link {
+      display: inline-flex; align-items: center; gap: 4px; margin-top: 7px;
+      color: var(--blue); font-size: 12px; font-weight: 700; text-decoration: none;
+    }
+    .config-external-link:hover { text-decoration: underline; }
+    .config-recommendations {
+      margin-top: 9px; padding: 10px 12px;
+      border: 1px solid #c3d4fb; border-radius: 8px; background: #f4f8ff;
+      font-size: 12px; line-height: 1.55; color: var(--muted);
+    }
+    .config-recommendations-title { color: var(--text); font-weight: 700; }
+    .config-recommendations-item { display: block; margin-top: 4px; }
+    .config-recommendations-item a { color: var(--blue); font-weight: 700; text-decoration: none; }
+    .config-recommendations-item a:hover { text-decoration: underline; }
+    .config-count { opacity: .72; font-weight: 700; margin-left: 4px; }
+    .roxy-workspace-box {
+      grid-column: 1 / -1; border: 1px solid #c3d4fb; background: #eef4ff;
+      border-radius: 8px; padding: 12px; display: grid; gap: 10px;
+    }
+    .roxy-workspace-box .row { align-items: flex-end; }
+    .roxy-invite-link {
+      display: inline-flex; align-items: center; justify-content: center; width: fit-content;
+      min-height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid #9bbcff;
+      background: #fff; color: var(--blue); text-decoration: none; font-size: 12px; font-weight: 800;
+    }
+    .roxy-invite-link:hover { background: #e0ebff; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div>
+      <h1>GPT 注册控制台</h1>
+      <p class="meta">本地 Web 控制台 · 数据更新于 <span id="updatedAt">-</span></p>
+      <div class="header-links">
+        <a href="https://t.me/+gu_cvEKq_vcyZWRl" target="_blank" rel="noopener noreferrer">TG 交流群</a>
+        <a href="/?ui=modern" title="切换到新版侧边栏 UI">切换新 UI</a>
+        <form method="post" action="/logout"><button type="submit">退出</button></form>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span>已注册</span><strong id="statAccounts">0</strong></div>
+      <div class="stat"><span>邮箱总数</span><strong id="statOutlook">0</strong></div>
+      <div class="stat"><span>可用</span><strong id="statAvailable">0</strong></div>
+      <div class="stat"><span>已用</span><strong id="statUsed">0</strong></div>
+      <div class="stat"><span>失败</span><strong id="statFailed">0</strong></div>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-inner">
+    <button data-tab="register" class="active">注册</button>
+    <button data-tab="accounts">账号</button>
+    <button data-tab="codex">Codex 授权</button>
+    <button data-tab="outlook">邮箱池</button>
+    <button data-tab="config">配置</button>
+  </div>
+</nav>
+
+<main>
+  <!-- ============ 注册 ============ -->
+  <div id="tab-register">
+    <section class="card">
+      <div class="head"><h2>启动批量注册</h2><p>从邮箱池自动领取邮箱并并发注册，下方实时查看任务进度与日志。</p></div>
+      <div class="body">
+        <div id="regWarn"></div>
+        <div class="row">
+          <div>
+            <label class="fld">注册数量
+              <input id="regCount" type="number" min="1" max="200" value="1">
+            </label>
+          </div>
+          <div>
+            <label class="fld">并发线程数
+              <input id="regWorkers" type="number" min="1" max="16" value="3">
+            </label>
+          </div>
+          <div>
+            <label class="fld">手动邮箱
+              <input id="regEmail" type="text" placeholder="可填一个，或多个用逗号分隔" autocomplete="off">
+            </label>
+          </div>
+          <div class="action-cell">
+            <button class="btn primary" id="btnStart">开始注册</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="toolbar">
+        <div><h2>任务列表</h2></div>
+        <div class="buttons">
+          <span class="muted" id="jobsSelectedHint" style="font-size:12px;align-self:center;margin-right:4px;">已选 0</span>
+          <button class="btn good" id="btnRetrySelectedJobs" disabled title="重试选中的失败、已停止或已取消任务">重试选中</button>
+          <button class="btn" id="btnDeleteSelectedJobs" disabled title="删除选中的非运行中任务，并同时删除对应日志">删除选中</button>
+          <button class="btn" id="btnCancelPending" title="把所有 status=排队 的任务标记为已取消，不再执行（已运行中的不影响）">取消所有排队</button>
+          <button class="btn" id="btnRefreshJobs">手动刷新</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="jobs-table">
+          <colgroup>
+            <col class="col-check"><col class="col-id"><col class="col-status"><col class="col-email">
+            <col class="col-time"><col class="col-time"><col class="col-traffic"><col class="col-error"><col class="col-actions">
+          </colgroup>
+          <thead><tr>
+            <th><input type="checkbox" id="jobsSelectAll" title="全选/取消全选当前页可删除任务"></th>
+            <th>ID</th><th>状态</th><th>邮箱</th><th>开始</th><th>完成</th><th>流量</th><th class="wrap">错误</th><th>操作</th>
+          </tr></thead>
+          <tbody id="jobsBody"></tbody>
+        </table>
+      </div>
+      <div class="pager-bar" id="pager-jobs"></div>
+      <div class="body hidden" id="logPanel">
+        <h3>任务 #<span id="logJobId"></span> 日志 <button class="btn" id="btnCloseLog" style="float:right;min-height:28px;">关闭</button></h3>
+        <div class="log" id="logContent">加载中…</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ 账号 ============ -->
+  <div id="tab-accounts" class="hidden">
+    <section class="card">
+      <div class="toolbar accounts-toolbar">
+        <div class="accounts-topbar">
+          <div class="search"><input id="qAccounts" placeholder="搜索邮箱、token、来源…"></div>
+          <div class="account-filter-strip btn-group">
+            <span class="muted selected-hint" id="accountsSelectedHint">已选 0</span>
+            <label class="inline-num" title="批量补跑 Codex 的并发线程数">线程
+              <input id="codexBulkWorkers" type="number" min="1" max="16" value="3">
+            </label>
+            <label class="inline-num" title="默认只显示未归档账号；勾选后单独查看归档账号">
+              <input id="showArchivedAccounts" type="checkbox" style="width:auto;min-height:auto;"> 查看归档
+            </label>
+            <label class="inline-num" title="只查询/显示已开通 Plus 的账号">
+              <input id="showPlusAccountsOnly" type="checkbox" style="width:auto;min-height:auto;"> 已开通Plus
+            </label>
+            <label class="inline-num" title="只查询/显示当前为 free 且可试用 Plus 的账号">
+              <input id="showPlusTrialAccountsOnly" type="checkbox" style="width:auto;min-height:auto;"> 可试用Plus
+            </label>
+            <label class="inline-num" title="只查询/显示已明确不能试用 Plus 的 free 账号；资格未知的账号不包含">
+              <input id="showFreeAccountsOnly" type="checkbox" style="width:auto;min-height:auto;"> free不可试用Plus
+            </label>
+            <label class="inline-num" title="按账号状态筛选账号">
+              状态
+              <select id="codexStatusFilter" style="width:auto;min-height:auto;">
+                <option value="">全部</option>
+                <option value="success">成功</option>
+                <option value="failed">失败</option>
+                <option value="retrying">补跑中</option>
+                <option value="stopped">已停止</option>
+                <option value="skipped">已跳过</option>
+                <option value="deactivated">账号废号</option>
+              </select>
+            </label>
+            <label class="inline-num" title="按账号 2FA/TOTP 状态筛选账号">
+              2FA
+              <select id="totpStatusFilter" style="width:auto;min-height:auto;">
+                <option value="">全部</option>
+                <option value="enabled">已开启</option>
+                <option value="disabled">未开启</option>
+                <option value="pending">设置中</option>
+                <option value="failed">设置失败</option>
+              </select>
+            </label>
+            <button class="btn" id="btnRefreshAccounts" title="重新加载当前筛选条件和当前页账号列表">刷新账号</button>
+          </div>
+        </div>
+        <div class="accounts-actionbar">
+          <div class="btn-group">
+            <span class="btn-group-title">套餐/提链</span>
+            <button class="btn primary" id="btnCheckSelectedLive" data-live-check-selected="1" title="重新登录选中账号；成功且未封号则标记正常，并刷新最新 AT/accessToken">查活</button>
+            <button class="btn primary" id="btnCheckSelectedPlans" disabled title="查询选中账号当前套餐；free 账号会检查 Plus 试用资格">查套餐</button>
+            <button class="btn good" id="btnExtractSelectedLinks" title="在新版界面打开独立提链页，查看印度 0 元候选账号">提链</button>
+          </div>
+          <div class="btn-group">
+            <span class="btn-group-title">Codex</span>
+            <button class="btn primary" id="btnRetrySelectedCodex" disabled title="给选中的账号批量补跑 Codex 授权">补跑</button>
+            <button class="btn good" id="btnDownloadSelectedCpa" disabled title="从 CPA auth-files 下载选中账号的 Codex JSON，并打包 ZIP">下载CPA</button>
+            <button class="btn danger" id="btnStopSelectedCodex" disabled title="停止选中账号中正在补跑的 Codex 授权">停止</button>
+          </div>
+          <div class="btn-group">
+            <span class="btn-group-title">批量</span>
+            <button class="btn primary" id="btnSetupSelectedTotp" disabled title="给选中的账号批量开启 2FA，并在完成后写回 TOTP 密钥">批量开2FA</button>
+            <button class="btn primary" id="btnChangeSelectedEmails" disabled title="为选中的账号从指定来源领取新邮箱并换绑">批量换邮箱</button>
+            <button class="btn good" id="btnNoteSelectedAccounts" disabled title="给选中的账号统一设置备注，留空可清空备注">备注</button>
+            <button class="btn good" id="btnCopySelectedLines" disabled title="复制选中账号的完整整行，每个账号一行">复制行</button>
+            <button class="btn good" id="btnCopySelectedTokens" disabled title="复制选中账号的 Token，每个账号一行">复制Token</button>
+            <button class="btn good" id="btnDownloadSelectedTxt" disabled title="把选中账号的完整整行保存为 TXT 文件，每个账号一行">下载TXT</button>
+            <button class="btn" id="btnArchiveSelectedAccounts" disabled title="归档选中的账号；默认账号列表将不再查询/显示这些账号">归档</button>
+            <button class="btn" id="btnDeleteSelectedAccounts" disabled title="删除选中的本地账号/token记录">删除</button>
+          </div>
+          <div class="btn-group">
+            <span class="btn-group-title">全部</span>
+            <button class="btn primary" id="copyAllTokens">复制Token</button>
+            <button class="btn good" id="copyAllLines">复制整行</button>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="accounts-table">
+          <colgroup><col class="col-check"><col class="col-id"><col class="col-email"><col class="col-source"><col class="col-token"><col class="col-password"><col class="col-plan"><col class="col-note"><col class="col-small"><col class="col-status"><col class="col-time"><col class="col-actions"></colgroup>
+          <thead><tr>
+            <th><input type="checkbox" id="accountsSelectAll" title="全选/取消全选当前页账号"></th>
+            <th>ID</th><th>邮箱</th><th>来源</th><th>Token</th><th>密码</th><th>套餐</th><th>备注</th><th>2FA</th><th>Codex</th><th>创建时间</th><th>操作</th>
+          </tr></thead>
+          <tbody id="accountsBody"></tbody>
+        </table>
+      </div>
+      <div class="pager-bar" id="pager-accounts"></div>
+      <div class="body hidden" id="retryLogPanel">
+        <h3>补跑日志：<span id="retryLogEmail" style="font-size:13px;font-weight:400;color:var(--muted);"></span>
+          <button class="btn" id="btnCloseRetryLog" style="float:right;min-height:28px;">关闭</button>
+        </h3>
+        <div class="log" id="retryLogContent">加载中…</div>
+      </div>
+      <div class="body hidden" id="liveLogPanel">
+        <h3>查活日志：<span id="liveLogEmail" style="font-size:13px;font-weight:400;color:var(--muted);"></span>
+          <button class="btn" id="btnCloseLiveLog" style="float:right;min-height:28px;">关闭</button>
+        </h3>
+        <div class="log" id="liveLogContent">加载中…</div>
+      </div>
+      <div class="body hidden" id="totpLogPanel">
+        <h3>2FA日志：<span id="totpLogEmail" style="font-size:13px;font-weight:400;color:var(--muted);"></span>
+          <button class="btn" id="btnCloseTotpLog" style="float:right;min-height:28px;">关闭</button>
+        </h3>
+        <div class="log" id="totpLogContent">加载中…</div>
+      </div>
+      <div class="body hidden" id="emailChangeLogPanel">
+        <h3>换绑日志：<span id="emailChangeLogAccount" style="font-size:13px;font-weight:400;color:var(--muted);"></span>
+          <button class="btn" id="btnCloseEmailChangeLog" style="float:right;min-height:28px;">关闭</button>
+        </h3>
+        <div class="log" id="emailChangeLogContent">加载中…</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ Codex 授权 ============ -->
+  <div id="tab-codex" class="hidden">
+    <section class="card">
+      <div class="toolbar">
+        <div>
+          <h2>Codex 授权账号</h2>
+          <p class="muted" style="font-size:12px;margin-top:4px;">
+            注册时自动跑 Codex 授权产出的 CPA 兼容凭证。点"下载 JSON"导出后可直接放到 CLIProxyAPI 的 <span class="mono">auths/</span> 目录使用。下载后会自动标记为已导出。
+          </p>
+        </div>
+        <div class="buttons">
+          <button class="btn" id="btnRefreshCodex">刷新</button>
+        </div>
+      </div>
+      <div class="body" style="display:flex;gap:14px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line);">
+        <div class="stat" style="background:#eef4ff;border-color:#c3d4fb;color:#1d4ed8;min-width:110px;padding:8px 12px;border-radius:6px;border:1px solid;">
+          <span style="font-size:11px;color:#475467;">总数</span>
+          <strong id="codexStatTotal" style="display:block;font-size:18px;margin-top:3px;">0</strong>
+        </div>
+        <div class="stat" style="background:#e9f7ef;border-color:#a7d4bc;color:#166534;min-width:110px;padding:8px 12px;border-radius:6px;border:1px solid;">
+          <span style="font-size:11px;color:#475467;">已导出</span>
+          <strong id="codexStatExported" style="display:block;font-size:18px;margin-top:3px;">0</strong>
+        </div>
+        <div class="stat" style="background:#fff7e6;border-color:#f3d99b;color:#92600a;min-width:110px;padding:8px 12px;border-radius:6px;border:1px solid;">
+          <span style="font-size:11px;color:#475467;">未导出</span>
+          <strong id="codexStatPending" style="display:block;font-size:18px;margin-top:3px;">0</strong>
+        </div>
+      </div>
+      <div class="toolbar" style="padding-top:10px;padding-bottom:10px;">
+        <div class="search"><input id="qCodex" placeholder="搜索邮箱、plan、account_id…"></div>
+        <div class="buttons">
+          <span class="muted" id="codexSelectedHint" style="font-size:12px;align-self:center;margin-right:4px;">已选 0</span>
+          <button class="btn primary" id="btnCodexDownloadBulk" disabled title="把选中的多个本地凭证打包成一个 JSON 文件下载（备份/迁移用，CPA 不能直接读，需先解包）">批量下载本地</button>
+          <button class="btn good" id="btnCodexDownloadBulkCpa" disabled title="从 CPA auth-files 下载选中账号的真实 Codex JSON，并打包成 ZIP（可直接解压放入 CPA auth-dir）">批量从CPA下载</button>
+          <button class="btn" id="btnCodexDeleteBulk" disabled title="删除选中的本地 Codex JSON 凭证文件">删除选中</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="codex-table">
+          <colgroup><col class="col-check"><col class="col-email"><col class="col-plan"><col class="col-status"><col class="col-account"><col class="col-time"><col class="col-expire"><col class="col-actions"></colgroup>
+          <thead><tr>
+            <th><input type="checkbox" id="codexSelectAll" title="全选/取消全选当前页"></th>
+            <th>邮箱</th><th>Plan</th><th>状态</th><th>Account ID</th><th>更新时间</th><th>过期时间</th><th>操作</th>
+          </tr></thead>
+          <tbody id="codexBody"></tbody>
+        </table>
+      </div>
+      <div class="pager-bar" id="pager-codex"></div>
+    </section>
+  </div>
+
+  <!-- ============ 邮箱池 ============ -->
+  <div id="tab-outlook" class="hidden">
+    <section class="card">
+      <div class="head"><h2>导入邮箱素材</h2><p>Outlook：邮箱----密码----clientId----refreshToken；通用API：邮箱----取码地址；通用IMAP 每行仅需“邮箱----IMAP密码”或“邮箱:IMAP密码”，服务器参数单独配置。</p></div>
+      <div class="body">
+        <div id="importResult"></div>
+        <label class="fld">导入类型
+          <select id="importSource">
+            <option value="outlook">Outlook 邮箱池</option>
+            <option value="generic_api">通用 API 取码邮箱</option>
+            <option value="imap">通用 IMAP 取码邮箱</option>
+          </select>
+          <span class="hint">注册来源可在配置里填多个，例如：outlook,generic_api,imap</span>
+        </label>
+        <div id="imapImportSettings" class="hidden" style="grid-template-columns:2fr 1fr 1fr;gap:10px;margin:8px 0;">
+          <label class="fld">IMAP 服务器<input id="imapServer" placeholder="imap.example.com"></label>
+          <label class="fld">端口<input id="imapPort" type="number" min="1" max="65535" value="993"></label>
+          <label class="fld">SSL<select id="imapSsl"><option value="true" selected>启用</option><option value="false">不启用</option></select></label>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center;margin:8px 0;color:var(--text);font-size:13px;">
+          <input id="importAsRegistered" type="checkbox" style="width:auto;min-height:auto;">
+          导入后默认视为“注册成功账号”（邮箱池标记已用，并出现在账号页，可直接批量补跑 Codex）
+        </label>
+        <textarea id="importText" placeholder="Outlook: email----password----clientId----refreshToken
+通用API: email----取码地址
+通用IMAP: email----imapPassword 或 email:imapPassword"></textarea>
+        <div style="margin-top:10px;"><button class="btn primary" id="btnImport">导入</button></div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="toolbar">
+        <div class="search">
+          <div class="row" style="gap:8px;align-items:center;">
+            <select id="poolSource" style="flex:0 0 180px;margin-top:0;">
+              <option value="all">全部邮箱池</option>
+              <option value="outlook">Outlook 邮箱池</option>
+              <option value="generic_api">通用 API 邮箱池</option>
+              <option value="imap">通用 IMAP 邮箱池</option>
+              <option value="cloudflare_domain">域名邮箱池</option>
+            </select>
+            <input id="qOutlook" placeholder="搜索邮箱、状态…">
+          </div>
+        </div>
+        <div class="buttons">
+          <span class="muted" id="outlookSelectedHint" style="font-size:12px;align-self:center;margin-right:4px;">已选 0</span>
+          <button class="btn good" id="btnMarkSelectedOutlookAvailable" disabled title="把选中的邮箱批量标记为未使用/可用">标记未使用</button>
+          <button class="btn" id="btnDisableSelectedOutlook" disabled title="批量停用选中的邮箱；停用后不会被注册任务领取">停用选中</button>
+          <button class="btn" id="btnFailSelectedOutlook" disabled title="批量标记选中的邮箱为失败">标失败</button>
+          <button class="btn" id="btnDeleteSelectedOutlook" disabled title="批量删除选中的邮箱素材">删除选中</button>
+          <button class="btn" id="copyAllEmails">复制全部邮箱素材</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="outlook-table">
+          <colgroup><col class="col-check"><col class="col-email"><col class="col-source"><col class="col-status"><col class="col-token"><col class="col-time"><col class="col-time"><col class="col-actions"></colgroup>
+          <thead><tr>
+            <th><input type="checkbox" id="outlookSelectAll" title="全选/取消全选当前页邮箱"></th>
+            <th>邮箱</th><th>类型</th><th>状态</th><th>Token</th><th>导入时间</th><th>已用时间</th><th>操作</th>
+          </tr></thead>
+          <tbody id="outlookBody"></tbody>
+        </table>
+      </div>
+      <div class="pager-bar" id="pager-outlook"></div>
+    </section>
+  </div>
+
+  <!-- ============ 配置 ============ -->
+  <div id="tab-config" class="hidden">
+    <section class="card">
+      <div class="head"><h2>运行配置</h2><p>仅开放运行时安全的开关与数值。协议级常量（client_id / sentinel 版本）不在此处，避免误改废号。</p></div>
+      <div class="body">
+        <div id="configBanner" class="banner info">修改后点"保存"，<b>立即生效</b>（自动热加载，无需重启）。</div>
+        <div id="configTabs" class="config-tabs"></div>
+        <div id="configForm">加载中…</div>
+        <div style="margin-top:8px;"><button class="btn primary" id="btnSaveConfig">保存配置</button></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="toast"></div>
+<div id="qrPanel" class="body hidden">
+  <h3>支付二维码 <button class="btn" onclick="closeQrModal()">关闭</button></h3>
+  <img id="qrImage" alt="支付二维码">
+  <a id="qrOpenLink" class="qr-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
+let copySeq = 0;
+const copyStore = new Map();
+let ACCOUNTS = [], OUTLOOK = [], CONFIG = [];
+let ACCOUNTS_TOTAL = 0;
+const TOTP_CODE_CACHE = new Map();
+let OUTLOOK_TOTAL = 0;
+let SHOW_ARCHIVED_ACCOUNTS = false;
+let SHOW_PLUS_ACCOUNTS_ONLY = false;
+let SHOW_PLUS_TRIAL_ACCOUNTS_ONLY = false;
+let SHOW_FREE_ACCOUNTS_ONLY = false;
+const ACCOUNT_SELECTED = new Set();
+const OUTLOOK_SELECTED = new Set();
+let JOBS = [];
+let JOBS_TOTAL = 0;
+let JOB_STATUS_COUNTS = {};
+let jobsRenderSignature = '';
+const JOB_SELECTED = new Set();
+let activeLogJob = null, logTimer = null, jobsTimer = null;
+
+// ---------- 分页状态 ----------
+const PAGERS = {
+  jobs:     { page: 1, size: 20 },
+  accounts: { page: 1, size: 20 },
+  outlook:  { page: 1, size: 20 },
+  codex:    { page: 1, size: 20 },
+};
+
+function _renderPager(id, total) {
+  const p = PAGERS[id];
+  const totalPages = Math.max(1, Math.ceil(total / p.size));
+  if (p.page > totalPages) p.page = Math.max(1, totalPages);
+  const start = total > 0 ? (p.page - 1) * p.size + 1 : 0;
+  const end = Math.min(p.page * p.size, total);
+  const el = document.getElementById('pager-' + id);
+  if (!el) return;
+  const sizes = [20, 50, 100];
+  el.innerHTML = `
+    <button onclick="pagerGo('${id}',-1)"${p.page <= 1 ? ' disabled' : ''}>← 上一页</button>
+    <span class="pager-info">${total > 0 ? `第 ${start}–${end} 条 / 共 ${total} 条（第 ${p.page} / ${totalPages} 页）` : '无数据'}</span>
+    <button onclick="pagerGo('${id}',1)"${p.page >= totalPages ? ' disabled' : ''}>下一页 →</button>
+    <select onchange="pagerSetSize('${id}',this.value)">${sizes.map(s =>
+      `<option value="${s}"${p.size === s ? ' selected' : ''}>${s} 条/页</option>`
+    ).join('')}</select>`;
+}
+
+function _reloadPagedList(id) {
+  ({ jobs: refreshJobs, accounts: loadAccounts, outlook: loadOutlook, codex: loadCodex })[id]?.();
+}
+function pagerGo(id, dir) {
+  PAGERS[id].page = Math.max(1, PAGERS[id].page + dir);
+  _reloadPagedList(id);
+}
+function pagerSetSize(id, val) {
+  PAGERS[id].size = parseInt(val, 10) || 20;
+  PAGERS[id].page = 1;
+  _reloadPagedList(id);
+}
+
+// ---------- 工具 ----------
+function fmt(v) { return v == null || v === '' ? '-' : String(v); }
+function esc(v) { return fmt(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// 配置表单必须用这个：空值保持空，不能把 '' 显示成 '-'，否则一点保存就会写回 config
+function attrEsc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function isPlaceholderEmpty(v) {
+  const s = String(v == null ? '' : v).trim();
+  return !s || ['-', '—', '无', '空', 'none', 'null', 'n/a', 'na'].includes(s.toLowerCase());
+}
+function short(v, n=40) { const s = v || ''; return s.length > n ? s.slice(0,n)+'…' : s; }
+function formatTraffic(t) {
+  if (!t || !t.available) return '-';
+  const n = (v) => Number.isFinite(Number(v)) ? Math.max(0, Number(v)) : 0;
+  const fmt = (v) => {
+    v = n(v);
+    if (v < 1024) return `${Math.round(v)} B`;
+    if (v < 1024 * 1024) return `${(v / 1024).toFixed(1)} KiB`;
+    return `${(v / 1024 / 1024).toFixed(2)} MiB`;
+  };
+  const j = t.js_coverage;
+  const jsHint = j && j.enabled ? `，JS脚本 ${n(j.script_count)}（执行 ${n(j.executed_script_count)}，候选 ${n(j.candidate_script_count)}）` : '';
+  return `<span title="上传 ${fmt(t.upload_bytes)}，下载 ${fmt(t.download_bytes)}，${n(t.request_count)} 个请求${jsHint}">${fmt(t.total_bytes)}</span>`;
+}
+function copyId(v) { if (!v) return ''; const id = 'c'+(++copySeq); copyStore.set(id, v); return id; }
+function cbtn(label, value, cls='') { const id = copyId(value); return `<button class="${cls}" data-copy-id="${id}" ${id?'':'disabled'}>${label}</button>`; }
+function pill(status) {
+  const map = { available:'可用', used:'已用', failed:'失败', partial_success:'部分成功', disabled:'已停用', pending:'排队', running:'运行中', stopping:'停止中', stopped:'已停止', success:'成功', cancelled:'已取消' };
+  return `<span class="pill status-${esc(status)}">${esc(map[status]||status||'-')}</span>`;
+}
+function showToast(t) { const el=$('#toast'); el.textContent=t; el.classList.add('show'); clearTimeout(showToast.t); showToast.t=setTimeout(()=>el.classList.remove('show'),1400); }
+async function copyText(text) {
+  if (!text) return;
+  try {
+    if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
+    else { const a=document.createElement('textarea'); a.value=text; a.style.position='fixed'; a.style.opacity='0'; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove(); }
+    showToast('已复制');
+  } catch(e) { showToast('复制失败'); }
+}
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  const j = await r.json().catch(()=>({}));
+  if (!r.ok) throw new Error(j.error || ('HTTP '+r.status));
+  return j;
+}
+function debounce(fn, wait=250) {
+  let t = null;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+
+// ---------- Tab 切换 ----------
+function activateTab(tab, persist=true) {
+  const allowed = ['register','accounts','codex','outlook','config'];
+  if (!allowed.includes(tab)) tab = 'register';
+  $$('nav button').forEach(x => x.classList.toggle('active', x.dataset.tab === tab));
+  allowed.forEach(t => $('#tab-'+t).classList.toggle('hidden', t !== tab));
+  if (persist) localStorage.setItem('gpt_console_active_tab', tab);
+  if (tab === 'accounts') loadAccounts();
+  if (tab === 'codex') loadCodex();
+  if (tab === 'outlook') loadOutlook();
+  if (tab === 'config') loadConfig();
+  if (tab === 'register') refreshJobs();
+}
+$$('nav button').forEach(b => b.addEventListener('click', () => activateTab(b.dataset.tab)));
+
+// ---------- 概览 ----------
+async function loadSummary() {
+  try {
+    const s = await api('/api/summary');
+    $('#statAccounts').textContent = s.accounts;
+    $('#statOutlook').textContent = s.outlook_total;
+    $('#statAvailable').textContent = s.outlook_available;
+    $('#statUsed').textContent = s.outlook_used;
+    $('#statFailed').textContent = s.outlook_failed;
+    $('#updatedAt').textContent = new Date().toLocaleTimeString();
+  } catch(e) {}
+}
+
+// ---------- 注册 / 任务 ----------
+$('#btnStart').addEventListener('click', async () => {
+  const count = parseInt($('#regCount').value || '1', 10);
+  const workers = parseInt($('#regWorkers').value || '3', 10);
+  const emails = String($('#regEmail')?.value || '').trim();
+  const activeCount = Number(JOB_STATUS_COUNTS.active || 0);
+  if (activeCount > 0) {
+    const ok = confirm(
+      `当前任务表里已有 ${activeCount} 个任务在跑或排队，` +
+      `这次会再加 ${count} 个，合计 ${activeCount + count} 个，确定继续？\n\n` +
+      `（如果只是想跑这 ${count} 个，建议先点"取消所有排队"清掉残留再提交）`
+    );
+    if (!ok) return;
+  }
+  $('#btnStart').disabled = true;
+  const restoreBtn = () => { $('#btnStart').disabled = false; };
+  try {
+    const payload = {count, workers};
+    if (emails) payload.emails = emails;
+    const r = await api('/api/jobs', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    $('#regWarn').innerHTML = r.warning ? `<div class="banner warn">${esc(r.warning)}（本次并发 ${r.workers || workers}）</div>` : `<div class="banner info">已提交 ${r.submitted} 个任务，本次并发 ${r.workers || workers}</div>`;
+    refreshJobs();
+  } catch(e) { $('#regWarn').innerHTML = `<div class="banner warn">${esc(e.message)}</div>`; }
+  finally { setTimeout(restoreBtn, 3000); }
+});
+$('#btnRefreshJobs').addEventListener('click', refreshJobs);
+$('#jobsSelectAll').addEventListener('change', (e) => {
+  const pageRows = JOBS.filter(j => !['running','stopping'].includes(j.status));
+  if (e.target.checked) pageRows.forEach(j => JOB_SELECTED.add(Number(j.id)));
+  else pageRows.forEach(j => JOB_SELECTED.delete(Number(j.id)));
+  renderJobs();
+});
+$('#btnDeleteSelectedJobs').addEventListener('click', deleteSelectedJobs);
+$('#btnRetrySelectedJobs').addEventListener('click', retrySelectedJobs);
+$('#btnCancelPending').addEventListener('click', async () => {
+  const pendingCount = Number(JOB_STATUS_COUNTS.pending || 0);
+  const msg = pendingCount > 0
+    ? `确定取消 ${pendingCount} 个排队中的任务吗？已运行中的任务不受影响。`
+    : '当前页没有排队任务；仍要请求后端取消所有排队任务吗？';
+  if (!confirm(msg)) return;
+  $('#btnCancelPending').disabled = true;
+  try {
+    const r = await api('/api/jobs/cancel-pending', { method:'POST', headers:{'Content-Type':'application/json'}, body: '{}' });
+    showToast(`已取消 ${r.cancelled} 个排队任务`);
+    refreshJobs();
+  } catch(e) { showToast('取消失败: ' + e.message); }
+  finally { $('#btnCancelPending').disabled = false; }
+});
+
+function renderJobs() {
+  const total = JOBS_TOTAL;
+  const rows = JOBS;
+  $('#jobsBody').innerHTML = rows.map(j => `
+    <tr>
+      <td><input type="checkbox" class="job-row-check" data-job-id="${esc(j.id)}" ${JOB_SELECTED.has(Number(j.id)) ? 'checked' : ''} ${['running','stopping'].includes(j.status) ? 'disabled title="运行中的任务不能选择"' : ''}></td>
+      <td class="muted">#${esc(j.id)}${j.parent_job_id ? `<div class="sub-cell" title="重试自任务 #${esc(j.parent_job_id)}">↳ #${esc(j.parent_job_id)} · ${esc(j.retry_attempt || 1)}</div>` : ''}</td>
+      <td>${pill(j.display_status || j.status)}</td>
+      <td title="${esc(j.email || '-')}">${esc(j.email || '-')}</td>
+      <td class="muted" title="${esc(j.started_at || '-')}">${esc(j.started_at || '-')}</td>
+      <td class="muted" title="${esc(j.completed_at || '-')}">${esc(j.completed_at || '-')}</td>
+      <td>${formatTraffic(j.network_traffic)}</td>
+      <td class="muted wrap" title="${esc(j.error_message || '')}">${esc(short(j.error_message || '', 90))}</td>
+      <td class="actions-cell">
+        <div class="actions job-actions">
+          <button data-log-job="${esc(j.id)}">任务日志</button>
+          ${j.status === 'running' && j.email && j.manual_otp_required ? `
+            <input class="manual-otp-input" data-otp-email="${esc(j.email)}" data-otp-job="${esc(j.id)}" placeholder="邮箱验证码" maxlength="8" style="width:96px;min-height:28px;padding:2px 6px;" title="手动模式下，打开邮箱后把 6 位验证码贴这里">
+            <button class="good" data-submit-otp-job="${esc(j.id)}" data-email="${esc(j.email)}">提交验证码</button>
+          ` : ''}
+          ${['pending','running','stopping'].includes(j.status) ? `<button class="danger" data-stop-job="${esc(j.id)}">${j.status === 'stopping' ? '停止/修复' : '停止'}</button>` : ''}
+          ${j.retryable ? `<button class="good" data-retry-job="${esc(j.id)}" title="${esc(j.retry_action === 'codex' ? '账号已创建，仅补跑 Codex 授权' : '创建新的注册任务，不覆盖原任务')}">${esc(j.retry_label || '重试')}</button>` : ''}
+          <button class="danger" data-delete-job="${esc(j.id)}" ${['running','stopping'].includes(j.status) ? 'disabled title="运行中的任务不能删除；如需删除请先停止"' : ''}>删除</button>
+        </div>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="9" class="muted">暂无任务</td></tr>';
+  updateJobsSelectionUi(rows);
+  _renderPager('jobs', total);
+}
+
+function updateJobsSelectionUi(pageRows = null) {
+  const hint = $('#jobsSelectedHint');
+  const bulkBtn = $('#btnDeleteSelectedJobs');
+  const bulkRetryBtn = $('#btnRetrySelectedJobs');
+  if (hint) hint.textContent = `已选 ${JOB_SELECTED.size}`;
+  if (bulkBtn) bulkBtn.disabled = JOB_SELECTED.size === 0;
+  if (bulkRetryBtn) {
+    bulkRetryBtn.disabled = JOB_SELECTED.size === 0;
+  }
+
+  const cbAll = $('#jobsSelectAll');
+  if (!cbAll) return;
+  if (!pageRows) {
+    pageRows = JOBS;
+  }
+  const selectableIds = pageRows.filter(j => !['running','stopping'].includes(j.status)).map(j => Number(j.id));
+  const checkedCount = selectableIds.filter(id => JOB_SELECTED.has(id)).length;
+  cbAll.checked = selectableIds.length > 0 && checkedCount === selectableIds.length;
+  cbAll.indeterminate = checkedCount > 0 && checkedCount < selectableIds.length;
+  cbAll.disabled = selectableIds.length === 0;
+}
+
+async function refreshJobs() {
+  try {
+    const p = PAGERS.jobs;
+    const res = await api(`/api/jobs?paged=1&page=${encodeURIComponent(p.page)}&page_size=${encodeURIComponent(p.size)}`);
+    const nextJobs = res.items || [];
+    JOBS_TOTAL = Number(res.total || nextJobs.length || 0);
+    JOB_STATUS_COUNTS = res.status_counts || {};
+    const totalPages = Math.max(1, Math.ceil(JOBS_TOTAL / p.size));
+    if (p.page > totalPages) { p.page = totalPages; return refreshJobs(); }
+    const nextSignature = JSON.stringify({items: nextJobs, total: JOBS_TOTAL, status_counts: JOB_STATUS_COUNTS, page: p.page, size: p.size});
+    JOBS = nextJobs;
+    if (nextSignature !== jobsRenderSignature) {
+      jobsRenderSignature = nextSignature;
+      renderJobs();
+    }
+    loadSummary();
+  } catch(e) {}
+}
+
+let modalScrollY = 0;
+function updateModalScrollLock() {
+  const opened = !$('#logPanel').classList.contains('hidden') || !$('#retryLogPanel').classList.contains('hidden') || !$('#liveLogPanel').classList.contains('hidden') || !$('#totpLogPanel').classList.contains('hidden') || !$('#emailChangeLogPanel').classList.contains('hidden') || !$('#qrPanel').classList.contains('hidden');
+  const locked = document.body.classList.contains('modal-open');
+  if (opened && !locked) {
+    modalScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.style.top = `-${modalScrollY}px`;
+    document.body.classList.add('modal-open');
+    document.documentElement.style.overflow = 'hidden';
+  } else if (!opened && locked) {
+    document.body.classList.remove('modal-open');
+    document.body.style.top = '';
+    document.documentElement.style.overflow = '';
+    window.scrollTo(0, modalScrollY || 0);
+  }
+}
+function closeLogModal() {
+  activeLogJob = null;
+  clearInterval(logTimer);
+  $('#logPanel').classList.add('hidden');
+  updateModalScrollLock();
+}
+function closeRetryLogModal() {
+  retryLogEmail = null;
+  clearInterval(retryLogTimer);
+  $('#retryLogPanel').classList.add('hidden');
+  updateModalScrollLock();
+}
+function closeLiveLogModal() {
+  liveLogEmail = null;
+  clearInterval(liveLogTimer);
+  $('#liveLogPanel').classList.add('hidden');
+  updateModalScrollLock();
+}
+function openQrModal(url) {
+  $('#qrImage').src = url;
+  $('#qrOpenLink').href = url;
+  $('#qrOpenLink').textContent = url;
+  $('#qrPanel').classList.remove('hidden');
+  updateModalScrollLock();
+}
+function closeQrModal() {
+  $('#qrPanel').classList.add('hidden');
+  $('#qrImage').removeAttribute('src');
+  updateModalScrollLock();
+}
+
+$('#jobsBody').addEventListener('pointerdown', (e) => {
+  const retryBtn = e.target.closest('[data-retry-job]');
+  if (!retryBtn || retryBtn.disabled || e.button !== 0) return;
+  e.preventDefault();
+  retryBtn.dataset.pointerHandled = '1';
+  retryJob(parseInt(retryBtn.dataset.retryJob, 10), retryBtn);
+});
+
+$('#jobsBody').addEventListener('click', (e) => {
+  const logBtn = e.target.closest('[data-log-job]');
+  if (logBtn) {
+    openLog(parseInt(logBtn.dataset.logJob, 10));
+    return;
+  }
+  const otpBtn = e.target.closest('[data-submit-otp-job]');
+  if (otpBtn) {
+    submitManualOtpForJob(otpBtn);
+    return;
+  }
+  const stopBtn = e.target.closest('[data-stop-job]');
+  if (stopBtn) {
+    stopJob(parseInt(stopBtn.dataset.stopJob, 10), stopBtn);
+    return;
+  }
+  const retryBtn = e.target.closest('[data-retry-job]');
+  if (retryBtn) {
+    if (retryBtn.dataset.pointerHandled === '1') {
+      delete retryBtn.dataset.pointerHandled;
+      return;
+    }
+    retryJob(parseInt(retryBtn.dataset.retryJob, 10), retryBtn);
+    return;
+  }
+  const delBtn = e.target.closest('[data-delete-job]');
+  if (delBtn) {
+    deleteJob(parseInt(delBtn.dataset.deleteJob, 10), delBtn);
+  }
+});
+
+async function submitManualOtpForJob(btn) {
+  const jobId = parseInt(btn.dataset.submitOtpJob, 10);
+  const email = btn.dataset.email || '';
+  const input = document.querySelector(`.manual-otp-input[data-otp-job="${jobId}"]`);
+  const code = (input?.value || '').trim();
+  if (!code) { showToast('请先填写邮箱验证码'); return; }
+  btn.disabled = true;
+  try {
+    const r = await api('/api/manual-otp', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, code, job_id: jobId }),
+    });
+    showToast(r.ok ? `已提交验证码给 ${email || ('#'+jobId)}` : (r.error || '提交失败'));
+    if (input) input.value = '';
+    if (activeLogJob === jobId) pollLog();
+  } catch (e) {
+    showToast('提交验证码失败: ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+$('#jobsBody').addEventListener('change', (e) => {
+  const cb = e.target.closest('.job-row-check');
+  if (!cb) return;
+  const id = Number(cb.dataset.jobId);
+  if (cb.checked) JOB_SELECTED.add(id);
+  else JOB_SELECTED.delete(id);
+  updateJobsSelectionUi();
+});
+$('#btnCloseLog').addEventListener('click', closeLogModal);
+
+async function stopJob(jobId, btn) {
+  const job = JOBS.find(j => Number(j.id) === Number(jobId));
+  const statusText = job?.status || '-';
+  const emailText = job?.email || '未分配邮箱';
+  if (!confirm(`确定停止任务 #${jobId}？\n\n状态：${statusText}\n邮箱：${emailText}\n\n排队任务会直接取消；运行中的任务会发送停止信号，并在当前步骤检查点退出。`)) return;
+  btn.disabled = true;
+  try {
+    const r = await api(`/api/jobs/${jobId}/stop`, { method:'POST', headers:{'Content-Type':'application/json'}, body: '{}' });
+    showToast(r.message || '已发送停止信号');
+    refreshJobs();
+    if (activeLogJob === jobId) pollLog();
+  } catch(e) {
+    showToast('停止失败: ' + e.message);
+    btn.disabled = false;
+  }
+}
+
+async function deleteJob(jobId, btn) {
+  const job = JOBS.find(j => Number(j.id) === Number(jobId));
+  const statusText = job?.status || '-';
+  const emailText = job?.email || '未分配邮箱';
+  if (!confirm(`确定删除任务 #${jobId}？\n\n状态：${statusText}\n邮箱：${emailText}\n\n会同时删除该任务日志。排队任务删除后将不会执行。`)) return;
+  btn.disabled = true;
+  try {
+    const r = await api(`/api/jobs/${jobId}/delete`, { method:'POST', headers:{'Content-Type':'application/json'}, body: '{}' });
+    if (activeLogJob === jobId) closeLogModal();
+    showToast(r.deleted ? '任务已删除' : '任务不存在');
+    JOB_SELECTED.delete(Number(jobId));
+    refreshJobs();
+  } catch(e) {
+    showToast('删除失败: ' + e.message);
+    btn.disabled = false;
+  }
+}
+
+async function deleteSelectedJobs() {
+  const ids = Array.from(JOB_SELECTED);
+  if (ids.length === 0) { showToast('请先选择任务'); return; }
+  const msg = `确定删除选中的 ${ids.length} 个任务吗？\n\n` +
+              `会同时删除对应日志。排队/运行中的任务会由后端逐条校验，不能删除的会自动跳过。`;
+  if (!confirm(msg)) return;
+
+  $('#btnDeleteSelectedJobs').disabled = true;
+  try {
+    const r = await api('/api/jobs/delete-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({job_ids: ids}),
+    });
+    (r.deleted || []).forEach(id => JOB_SELECTED.delete(Number(id)));
+    if (activeLogJob != null && (r.deleted || []).map(Number).includes(Number(activeLogJob))) closeLogModal();
+    const skippedCount = (r.skipped || []).length;
+    showToast(skippedCount ? `已删除 ${r.deleted_count || 0} 个，跳过 ${skippedCount} 个` : `已删除 ${r.deleted_count || 0} 个`);
+    refreshJobs();
+  } catch(e) {
+    showToast('批量删除失败: ' + e.message);
+    updateJobsSelectionUi();
+  }
+}
+
+async function retryJob(jobId, btn) {
+  const job = JOBS.find(j => Number(j.id) === Number(jobId));
+  if (!job || !job.retryable) { showToast('该任务当前不可重试'); return; }
+  const actionText = job.retry_action === 'codex' ? '仅补跑 Codex 授权' : '创建新的完整注册任务';
+  if (!confirm(`确定${job.retry_label || '重试'}任务 #${jobId}？\n\n${actionText}\n原任务记录和日志会保留。`)) return;
+  btn.disabled = true;
+  try {
+    const r = await api(`/api/jobs/${jobId}/retry`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({}),
+    });
+    showToast(r.message || '已提交重试任务');
+    JOB_SELECTED.delete(Number(jobId));
+    refreshJobs();
+  } catch (e) {
+    showToast('重试失败: ' + e.message);
+    btn.disabled = false;
+  }
+}
+
+async function retrySelectedJobs() {
+  const ids = Array.from(JOB_SELECTED);
+  if (!confirm(`确定重试选中的 ${ids.length} 个任务吗？\n\n后端会逐条校验；已创建账号的任务只补跑 Codex，其余任务重新入队注册，不能重试的会自动跳过。`)) return;
+  const btn = $('#btnRetrySelectedJobs');
+  btn.disabled = true;
+  try {
+    const r = await api('/api/jobs/retry-bulk', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({job_ids: ids}),
+    });
+    ids.forEach(id => JOB_SELECTED.delete(Number(id)));
+    const skippedCount = (r.skipped || []).length;
+    const reusedCount = r.reused_count || 0;
+    showToast(`已提交 ${r.started_count || 0} 个${reusedCount ? `，复用 ${reusedCount} 个` : ''}${skippedCount ? `，跳过 ${skippedCount} 个` : ''}`);
+    refreshJobs();
+  } catch (e) {
+    showToast('批量重试失败: ' + e.message);
+  } finally {
+    updateJobsSelectionUi();
+  }
+}
+
+function openLog(jobId) {
+  activeLogJob = jobId;
+  $('#logJobId').textContent = jobId;
+  $('#logPanel').classList.remove('hidden');
+  updateModalScrollLock();
+  $('#logContent').textContent = '加载中…';
+  pollLog();
+  clearInterval(logTimer);
+  logTimer = setInterval(pollLog, 5000);
+}
+async function pollLog() {
+  if (activeLogJob == null) return;
+  try {
+    const r = await api(`/api/jobs/${activeLogJob}/log`);
+    const c = $('#logContent');
+    const atBottom = c.scrollTop + c.clientHeight >= c.scrollHeight - 30;
+    c.textContent = r.log || '(暂无日志)';
+    if (atBottom) c.scrollTop = c.scrollHeight;
+    if (r.job && ['success','failed','stopped','cancelled'].includes(r.job.status)) clearInterval(logTimer);
+  } catch(e) {}
+}
+
+// ---------- 账号 ----------
+let accountsLoading = false;
+let planStatusLoading = false;
+let planStatusRevision = '';
+function getCodexBulkWorkers() {
+  const el = document.getElementById('codexBulkWorkers');
+  return Math.max(1, Math.min(16, Number((el && el.value) || 3)));
+}
+function getAccountsCodexFilter() {
+  const el = $('#codexStatusFilter');
+  return (el ? el.value : '').trim();
+}
+function getAccountsTotpFilter() {
+  const el = $('#totpStatusFilter');
+  return (el ? el.value : '').trim();
+}
+function getAccountsPlanFilter() {
+  if (SHOW_PLUS_ACCOUNTS_ONLY) return 'plus';
+  if (SHOW_PLUS_TRIAL_ACCOUNTS_ONLY) return 'plus_trial';
+  if (SHOW_FREE_ACCOUNTS_ONLY) return 'free_no_trial';
+  return '';
+}
+async function loadAccounts() {
+  if (accountsLoading) return;
+  accountsLoading = true;
+  try {
+    const archived = SHOW_ARCHIVED_ACCOUNTS ? 'only' : '0';
+    const plan = getAccountsPlanFilter();
+    const codex = getAccountsCodexFilter();
+    const totp = getAccountsTotpFilter();
+    const q = $('#qAccounts') ? $('#qAccounts').value.trim() : '';
+    const p = PAGERS.accounts;
+    const res = await api(`/api/accounts?paged=1&page=${encodeURIComponent(p.page)}&page_size=${encodeURIComponent(p.size)}&archived=${encodeURIComponent(archived)}&plan=${encodeURIComponent(plan)}&codex_status=${encodeURIComponent(codex)}&totp_status=${encodeURIComponent(totp)}&q=${encodeURIComponent(q)}`);
+    ACCOUNTS = res.items || [];
+    ACCOUNTS_TOTAL = Number(res.total || ACCOUNTS.length || 0);
+    const totalPages = Math.max(1, Math.ceil(ACCOUNTS_TOTAL / p.size));
+    if (p.page > totalPages) { p.page = totalPages; accountsLoading = false; return loadAccounts(); }
+    renderAccounts();
+  } catch(e) { showToast('加载账号失败: ' + e.message); }
+  finally { accountsLoading = false; }
+}
+async function pollAccountPlanStatuses() {
+  if (planStatusLoading || accountsLoading) return;
+  planStatusLoading = true;
+  try {
+    const archived = SHOW_ARCHIVED_ACCOUNTS ? 'only' : '0';
+    const plan = getAccountsPlanFilter();
+    const codex = getAccountsCodexFilter();
+    const totp = getAccountsTotpFilter();
+    const q = $('#qAccounts') ? $('#qAccounts').value.trim() : '';
+    const p = PAGERS.accounts;
+    const snapshot = await api(`/api/accounts/plan-check-status?page=${encodeURIComponent(p.page)}&page_size=${encodeURIComponent(p.size)}&archived=${encodeURIComponent(archived)}&plan=${encodeURIComponent(plan)}&codex_status=${encodeURIComponent(codex)}&totp_status=${encodeURIComponent(totp)}&q=${encodeURIComponent(q)}`);
+    const items = snapshot.items || [];
+    const accountById = new Map(ACCOUNTS.map(r => [Number(r.id), r]));
+    const hasUnknown = items.some(item => !accountById.has(Number(item.id)));
+    if (hasUnknown || items.length !== ACCOUNTS.length || Number(snapshot.total || 0) !== ACCOUNTS_TOTAL) {
+      planStatusRevision = snapshot.revision || '';
+      await loadAccounts();
+      return;
+    }
+    if ((snapshot.revision || '') !== planStatusRevision) {
+      let needsFullReload = false;
+      items.forEach(item => {
+        const account = accountById.get(Number(item.id));
+        const wasChecking = ['queued', 'running'].includes(account?.plan_check_status);
+        const isChecking = ['queued', 'running'].includes(item.plan_check_status);
+        const wasExtracting = ['queued', 'running'].includes(account?.extract_link_status);
+        const isExtracting = ['queued', 'running'].includes(item.extract_link_status);
+        const wasAgenting = ['queued', 'running'].includes(account?.codex_agent_status);
+        const isAgenting = ['queued', 'running'].includes(item.codex_agent_status);
+        if (wasChecking && !isChecking) needsFullReload = true;
+        if (wasExtracting && !isExtracting) needsFullReload = true;
+        if (wasAgenting && !isAgenting) needsFullReload = true;
+        Object.assign(account, item);
+      });
+      planStatusRevision = snapshot.revision || '';
+      if (needsFullReload) await loadAccounts();
+      else renderAccounts();
+    }
+  } catch(e) {}
+  finally { planStatusLoading = false; }
+}
+function _codexCell(r) {
+  const s = r.codex_status || '';
+  const err = r.codex_error || '';
+  const titleAttr = err ? ` title="${esc(err)}"` : '';
+  if (s === 'success') return `<span class="pill status-success">成功</span>`;
+  if (s === 'retrying') return `<span class="pill status-running">补跑中</span>`;
+  if (s === 'stopped') return `<span class="pill status-used"${titleAttr}>已停止</span>`;
+  if (s === 'failed') return `<span class="pill status-failed"${titleAttr}>失败</span>`;
+  if (s === 'skipped') return `<span class="pill status-used">已跳过</span>`;
+  if (s === 'deactivated') return `<span class="pill status-failed" title="授权记录显示账号异常，建议通过查活确认账号状态">失败</span>`;
+  return `<span class="muted">-</span>`;
+}
+function _codexAgentCell(r) {
+  const s = r.codex_agent_status || '';
+  const err = r.codex_agent_error || '';
+  const msg = r.codex_agent_message || '';
+  const title = esc(msg || r.codex_agent_runtime_id || '');
+  if (s === 'queued') return `<div class="agent-token-cell"><span class="pill status-running" title="${title}">排队中</span></div>`;
+  if (s === 'running') return `<div class="agent-token-cell"><span class="pill status-running" title="${title}">生成中</span></div>`;
+  if (s === 'success') {
+    const rid = r.codex_agent_runtime_id ? short(r.codex_agent_runtime_id, 10) : '已生成';
+    const copy = r.codex_agent_has_token ? `<button data-account-copy-secret="codex_agent_token" data-account-id="${esc(r.id)}" title="按需读取并复制完整 Agent Token">复制Agent Token</button>` : '';
+    const download = `<button class="agent-download" data-codex-agent-download="${esc(r.id)}" title="下载该账号 Codex Agent auth.json">下载Agent</button>`;
+    const uploadSub2 = `<button class="agent-download" data-codex-agent-upload-sub2="${esc(r.id)}" title="上传该账号 Agent Token 到 sub2api">上传sub2</button>`;
+    const regen = `<button data-codex-agent="${esc(r.id)}" title="重新生成 Codex Agent Token">重生成</button>`;
+    return `<div class="agent-token-cell"><span class="pill status-success" title="${title}">${esc(rid)}</span>${copy}${download}${uploadSub2}${regen}</div>`;
+  }
+  const gen = r.has_access_token ? `<button data-codex-agent="${esc(r.id)}" title="生成 Codex CLI agent_identity auth.json/token">生成Agent</button>` : '';
+  if (s === 'failed') return `<div class="agent-token-cell"><span class="pill status-failed" title="${title}">失败</span>${gen}</div>`;
+  return gen ? `<div class="agent-token-cell">${gen}</div>` : '<span class="muted">-</span>';
+}
+function _fmtPlanTime(v, dateOnly = false) {
+  if (!v) return '';
+  try {
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) {
+      const raw = String(v).replace('T', ' ').replace(/(\+00:00|Z)$/, '');
+      return dateOnly ? raw.slice(0, 10) : raw;
+    }
+    const pad = n => String(n).padStart(2, '0');
+    const day = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    return dateOnly ? day : `${day} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch(e) {
+    return String(v);
+  }
+}
+function _billingLabel(v) {
+  const x = (v || '').toString().toLowerCase();
+  if (x === 'monthly') return '月付';
+  if (x === 'yearly' || x === 'annual' || x === 'annually') return '年付';
+  return v || '';
+}
+function _discountLabel(r) {
+  const amount = r.discount_amount;
+  const type = (r.discount_type || '').toString().toLowerCase();
+  if (amount === undefined || amount === null || amount === '') return '';
+  const n = Number(amount);
+  if (type === 'percentage' && !Number.isNaN(n)) { const v = Number.isInteger(n) ? String(n) : String(n); return `${v}%折扣`; }
+  if (!Number.isNaN(n)) return `${n}折扣`;
+  return `${amount}折扣`;
+}
+function _planCell(r) {
+  const ok = r.plan_check_ok;
+  const err = r.plan_check_error || '';
+  const plan = (r.current_plan_type || r.plan_type || '-').toString();
+  const checked = r.plan_checked_at ? `查询: ${esc(r.plan_checked_at)}` : '未查询实时套餐';
+  const route = (r.plan_check_network_route || '').toString();
+  const routeLabel = route === 'proxy' ? `网络: 代理${r.plan_check_proxy_used ? ` (${r.plan_check_proxy_used})` : ''}` :
+    route === 'direct_fallback' ? `网络: 直连回退${r.plan_check_proxy_fallback_reason ? ` (${r.plan_check_proxy_fallback_reason})` : ''}` :
+    route === 'direct' ? '网络: 直连' : '';
+  const title = [err ? esc(err) : checked, routeLabel].filter(Boolean).join('；');
+  if (['queued','running'].includes(r.plan_check_status)) {
+    const automatic = r.plan_check_trigger === 'registration_auto';
+    const queued = r.plan_check_status === 'queued';
+    const label = automatic ? (queued ? '自动查询排队中' : '自动查询中') : (queued ? '查询排队中' : '查询中');
+    const stamp = queued ? r.plan_check_queued_at : r.plan_check_started_at;
+    const detail = stamp ? `${queued ? '入队' : '开始'}: ${esc(stamp)}` : '';
+    return `<span class="pill status-running" title="${detail}">${label}</span>`;
+  }
+  if (err || r.plan_check_status === 'failed') {
+    const reason = err || '套餐查询失败，未返回具体原因';
+    const hasLastSuccess = Boolean(r.plan_last_success_at);
+    const lastPlan = hasLastSuccess ? `${plan}${r.plus_trial_eligible ? '/可Plus试用' : ''}` : '';
+    const lastText = lastPlan ? `（上次: ${lastPlan}）` : '';
+    const lastTitle = hasLastSuccess ? `上次成功: ${esc(r.plan_last_success_at)}` : '';
+    return `<div class="extract-link-cell"><span class="pill status-failed" title="${[esc(reason), lastTitle].filter(Boolean).join('；')}">查询失败${esc(lastText)}</span><div class="extract-link-error" title="${esc(reason)}">${esc(reason)}</div></div>`;
+  }
+  const lower = plan.toLowerCase();
+
+  if (lower === 'free') {
+    const checkedOk = ok === true || r.plan_check_status === 'success';
+    if (!checkedOk) {
+      return `<span class="pill status-running" title="${title}">${esc(plan)}（待查资格）</span>`;
+    }
+    const text = r.plus_trial_eligible ? 'free(可Plus试用)' : 'free';
+    const cls = r.plus_trial_eligible ? 'status-success' : 'status-used';
+    const t = r.plus_trial_eligible ? `${title}；Plus 试用资格可用` : title;
+    return `<span class="pill ${cls}" title="${t}">${esc(text)}</span>`;
+  }
+
+  const isPaid = lower.includes('plus') || lower.includes('pro') || lower.includes('team') || lower.includes('go');
+  const cls = isPaid ? 'status-success' : 'status-running';
+  const expireRaw = r.plan_expires_at || r.expires_at || r.plan_renews_at || r.renews_at || '';
+  const expire = _fmtPlanTime(expireRaw, true);
+  const parts = [];
+  const billing = _billingLabel(r.billing_period);
+  if (billing) parts.push(billing);
+  if (r.billing_currency) parts.push(r.billing_currency);
+  if (expire) parts.push(`到期 ${expire}`);
+  const discount = _discountLabel(r);
+  if (discount) parts.push(discount);
+  const text = parts.length ? `${plan}（${parts.join('/')}）` : plan;
+  const detail = [title];
+  if (expireRaw) detail.push(`到期时间: ${expireRaw}`);
+  if (r.plan_renews_at) detail.push(`续费时间: ${r.plan_renews_at}`);
+  if (r.discount_expires_at) detail.push(`折扣结束: ${r.discount_expires_at}`);
+  if (r.discount_promo_campaign_id) detail.push(`优惠: ${r.discount_promo_campaign_id}`);
+  return `<span class="pill ${cls}" title="${esc(detail.join('；'))}">${esc(text)}</span>`;
+}
+function _planAction(r) {
+  if (['queued','running'].includes(r.plan_check_status)) {
+    const automatic = r.plan_check_trigger === 'registration_auto';
+    const queued = r.plan_check_status === 'queued';
+    const label = automatic ? (queued ? '自动查询排队中…' : '自动查询中…') : (queued ? '查询排队中…' : '查询中…');
+    return `<button data-plan-check="${esc(r.id)}" disabled title="套餐查询正在执行，完成后可再次查询">${label}</button>`;
+  }
+  return `<button data-plan-check="${esc(r.id)}" title="查询当前套餐；free 账号会检查 Plus 试用资格">查套餐</button>`;
+}
+function _codexAction(r) {
+  const s = r.codex_status || '';
+  if (s === 'retrying') {
+    return `<button class="danger" data-codex-stop="${esc(r.email)}" title="停止该账号正在进行的 Codex 补跑">停止补跑</button> <button data-codex-reset-retrying="${esc(r.email)}" title="只重置状态；不会向运行线程发送停止信号">重置状态</button>`;
+  }
+  if (s === 'deactivated') return '';
+  const label = s === 'success' ? '重新补跑 Codex' : '补跑 Codex';
+  return `<button data-codex-retry="${esc(r.email)}" title="重新跑一次 Codex 授权（会消耗 1 封邮箱 OTP + 1 个接码短信）">${label}</button>`;
+}
+function _totpAction(r) {
+  const status = r.totp_setup_status || '';
+  if (r.totp_enabled) {
+    const cached = TOTP_CODE_CACHE.get(Number(r.id));
+    const codeHtml = cached?.code
+      ? `<span class="twofa-code" title="${esc(cached.at || '')}">${esc(cached.code)}</span><button type="button" class="twofa-action" data-account-show-totp-code="${esc(r.id)}" title="刷新当前验证码">刷新</button><button type="button" class="twofa-action" data-account-copy-shown-totp-code="${esc(r.id)}" title="复制当前显示的验证码">复制验证码</button>`
+      : `<button type="button" class="twofa-action" data-account-show-totp-code="${esc(r.id)}" title="显示当前验证码">看验证码</button>`;
+    return `<div class="twofa-actions"><span class="twofa-badge">已启用</span><button type="button" class="twofa-action" data-account-copy-secret="totp_secret" data-account-id="${esc(r.id)}" title="复制当前 2FA 密钥">复制密钥</button>${codeHtml}</div>`;
+  }
+  if (status === 'queued' || status === 'running') {
+    return `<span class="pill status-running">${status === 'queued' ? '排队中' : '开启中'}</span>`;
+  }
+  if (!r.has_access_token) {
+    return `<span class="muted">无Token</span>`;
+  }
+  const tip = r.totp_setup_error || r.totp_setup_message || '为该账号开启 2FA，并把 TOTP 密钥写回账号信息';
+  return `<button type="button" class="twofa-action" data-account-totp-setup="${esc(r.id)}" title="${esc(tip)}">开启2FA</button>`;
+}
+function _liveStatusSub(r) {
+  const s = r.live_check_status || '';
+  const err = r.live_check_error || '';
+  const at = r.live_checked_at || '';
+  const fp = r.live_check_fingerprint_text || '';
+  if (s === 'live') return `<div class="sub-cell" title="${esc([at, fp].filter(Boolean).join('\n'))}">查活: 正常${fp ? ` · ${esc(fp)}` : ''}</div>`;
+  if (s === 'queued') return `<div class="sub-cell" style="color:#e6a23c">查活: 排队</div>`;
+  if (s === 'running') return `<div class="sub-cell" style="color:#e6a23c">查活: 运行中</div>`;
+  if (s === 'deactivated') return `<div class="sub-cell" style="color:#f56c6c" title="${esc(err || at)}">查活: 已废</div>`;
+  if (s === 'failed') return `<div class="sub-cell" style="color:#e6a23c" title="${esc(err || at)}">查活: 失败</div>`;
+  return '';
+}
+function renderAccounts() {
+  const p = PAGERS.accounts;
+  const total = ACCOUNTS_TOTAL;
+  const rows = ACCOUNTS;
+  $('#accountsBody').innerHTML = rows.map(r => `
+    <tr>
+      <td><input type="checkbox" class="account-row-check" data-account-id="${esc(r.id)}" ${ACCOUNT_SELECTED.has(Number(r.id)) ? 'checked' : ''}></td>
+      <td class="muted">#${esc(r.id)}</td>
+      <td class="account-email-cell" title="${esc(r.email || '-')}${r.original_email ? `\n原邮箱: ${esc(r.original_email)}` : ''}\n${esc(r.user_name || '-')}"><div class="main-cell">${esc(r.email)}${r.archived ? ' <span class="pill status-used" title="该账号已归档">归档</span>' : ''}</div>${r.original_email ? `<div class="account-email-history">原邮箱: ${esc(r.original_email)}</div>` : ''}<div class="account-email-user">${esc(r.user_name || '-')}</div>${['queued','running'].includes(r.email_change_status) ? '<div class="account-email-status">换绑中</div>' : (r.email_change_status === 'failed' ? '<div class="account-email-status">换绑失败</div>' : '')}</td>
+      <td>${esc(r.email_source || '-')}</td>
+      <td><span class="mono" title="列表仅显示预览，完整 Token 请点复制">${r.has_access_token ? '有Token' : '<span class="muted">无Token</span>'}</span>${_liveStatusSub(r)}</td>
+      <td>${r.password ? `<span class="mono" title="${esc(r.password)}">${esc(short(r.password, 18))}</span>` : '<span class="muted">-</span>'}</td>
+      <td>${_planCell(r)}</td>
+      <td class="wrap" title="${esc(r.note || '')}">${r.note ? esc(short(r.note, 80)) : '<span class="muted">-</span>'}</td>
+      <td>${_totpAction(r)}</td>
+      <td>${_codexCell(r)}</td>
+      <td class="muted">${esc(r.created_at || '-')}</td>
+      <td class="actions actions-cell">
+        <div class="account-row-actions">
+          <div class="account-action-group"><button class="primary" data-account-copy-secret="access_token" data-account-id="${esc(r.id)}" ${r.has_access_token ? '' : 'disabled'}>复制Token</button> <button class="good" data-account-copy-secret="copy_line" data-account-id="${esc(r.id)}">复制整行</button></div>
+          <div class="account-action-group"><button data-account-note="${esc(r.id)}" title="设置/清空该账号备注">备注</button> <button data-account-change-email="${esc(r.id)}">换绑邮箱</button> <button data-account-change-email-log="${esc(r.id)}">换绑日志</button> <button data-account-live-check="${esc(r.id)}" title="重新登录该账号，成功则刷新最新 AT/accessToken">查活</button> <button data-account-live-log="${esc(r.email)}" title="查看该账号最近一次查活日志">查活日志</button> <button data-account-totp-log="${esc(r.email)}" title="查看该账号最近一次 2FA 设置日志">2FA日志</button> ${_planAction(r)}</div>
+          <div class="account-action-group">${_codexAction(r)} <button data-codex-log="${esc(r.email)}" title="查看该账号最近一次 Codex 补跑日志">补跑日志</button></div>
+          <div class="account-action-group danger-zone"><button data-account-archive="${esc(r.id)}" data-archived="${r.archived ? '0' : '1'}" title="${r.archived ? '恢复到默认账号列表' : '归档后默认账号列表不再显示'}">${r.archived ? '恢复' : '归档'}</button> <button class="danger" data-account-delete="${esc(r.id)}" data-email="${esc(r.email)}">删除</button></div>
+        </div>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="12" class="muted">暂无账号</td></tr>';
+  updateAccountSelectionUi(rows);
+  _renderPager('accounts', total);
+}
+
+function updateAccountSelectionUi(pageRows = null) {
+  const hint = $('#accountsSelectedHint');
+  const bulkBtn = $('#btnDeleteSelectedAccounts');
+  const retryBulkBtn = $('#btnRetrySelectedCodex');
+  const stopCodexBulkBtn = $('#btnStopSelectedCodex');
+  const downloadCpaBtn = $('#btnDownloadSelectedCpa');
+  const checkPlanBtn = $('#btnCheckSelectedPlans');
+  const copySelectedBtn = $('#btnCopySelectedLines');
+  const copySelectedTokensBtn = $('#btnCopySelectedTokens');
+  const downloadTxtBtn = $('#btnDownloadSelectedTxt');
+  const noteSelectedBtn = $('#btnNoteSelectedAccounts');
+  const archiveSelectedBtn = $('#btnArchiveSelectedAccounts');
+  const setupTotpBtn = $('#btnSetupSelectedTotp');
+  const changeEmailsBtn = $('#btnChangeSelectedEmails');
+  if (hint) hint.textContent = `已选 ${ACCOUNT_SELECTED.size}`;
+  if (bulkBtn) bulkBtn.disabled = ACCOUNT_SELECTED.size === 0;
+  if (retryBulkBtn) retryBulkBtn.disabled = ACCOUNT_SELECTED.size === 0;
+  if (stopCodexBulkBtn) stopCodexBulkBtn.disabled = ACCOUNT_SELECTED.size === 0;
+  if (downloadCpaBtn) downloadCpaBtn.disabled = ACCOUNT_SELECTED.size === 0;
+  if (checkPlanBtn) checkPlanBtn.disabled = ACCOUNT_SELECTED.size === 0;
+  if (copySelectedBtn) copySelectedBtn.disabled = ACCOUNT_SELECTED.size === 0;
+  if (copySelectedTokensBtn) copySelectedTokensBtn.disabled = ACCOUNT_SELECTED.size === 0;
+  if (downloadTxtBtn) downloadTxtBtn.disabled = ACCOUNT_SELECTED.size === 0;
+  if (noteSelectedBtn) noteSelectedBtn.disabled = ACCOUNT_SELECTED.size === 0;
+  if (setupTotpBtn) setupTotpBtn.disabled = ACCOUNT_SELECTED.size === 0;
+  if (changeEmailsBtn) changeEmailsBtn.disabled = ACCOUNT_SELECTED.size === 0;
+  if (archiveSelectedBtn) {
+    archiveSelectedBtn.disabled = ACCOUNT_SELECTED.size === 0;
+    archiveSelectedBtn.textContent = SHOW_ARCHIVED_ACCOUNTS ? '恢复选中' : '归档选中';
+    archiveSelectedBtn.title = SHOW_ARCHIVED_ACCOUNTS ? '把选中的归档账号恢复到默认账号列表' : '归档选中的账号；默认账号列表将不再查询/显示这些账号';
+  }
+
+  const cbAll = $('#accountsSelectAll');
+  if (!cbAll) return;
+  if (!pageRows) {
+    pageRows = ACCOUNTS;
+  }
+  const pageIds = pageRows.map(r => Number(r.id));
+  const checkedCount = pageIds.filter(id => ACCOUNT_SELECTED.has(id)).length;
+  cbAll.checked = pageIds.length > 0 && checkedCount === pageIds.length;
+  cbAll.indeterminate = checkedCount > 0 && checkedCount < pageIds.length;
+  cbAll.disabled = pageIds.length === 0;
+}
+
+// ---------- 补跑日志面板 ----------
+let retryLogEmail = null, retryLogTimer = null;
+
+function openRetryLog(email) {
+  retryLogEmail = email;
+  $('#retryLogEmail').textContent = email;
+  $('#retryLogPanel').classList.remove('hidden');
+  updateModalScrollLock();
+  $('#retryLogContent').textContent = '加载中…';
+  pollRetryLog();
+  clearInterval(retryLogTimer);
+  retryLogTimer = setInterval(pollRetryLog, 5000);
+}
+async function pollRetryLog() {
+  if (!retryLogEmail) return;
+  try {
+    const r = await api(`/api/codex/retry-log?email=${encodeURIComponent(retryLogEmail)}`);
+    const c = $('#retryLogContent');
+    const atBottom = c.scrollTop + c.clientHeight >= c.scrollHeight - 30;
+    c.textContent = r.log || '(暂无日志，等待任务写入…)';
+    if (atBottom) c.scrollTop = c.scrollHeight;
+    if (!r.running) {
+      clearInterval(retryLogTimer);
+      loadAccounts();
+    }
+  } catch(e) {}
+}
+$('#btnCloseRetryLog').addEventListener('click', closeRetryLogModal);
+
+// ---------- 查活日志面板 ----------
+let liveLogEmail = null, liveLogTimer = null;
+
+function openLiveLog(email) {
+  liveLogEmail = email;
+  $('#liveLogEmail').textContent = email;
+  $('#liveLogPanel').classList.remove('hidden');
+  updateModalScrollLock();
+  $('#liveLogContent').textContent = '加载中…';
+  pollLiveLog();
+  clearInterval(liveLogTimer);
+  liveLogTimer = setInterval(pollLiveLog, 5000);
+}
+async function pollLiveLog() {
+  if (!liveLogEmail) return;
+  try {
+    const r = await api(`/api/accounts/live-check-log?email=${encodeURIComponent(liveLogEmail)}`);
+    const c = $('#liveLogContent');
+    const atBottom = c.scrollTop + c.clientHeight >= c.scrollHeight - 30;
+    c.textContent = r.log || '(暂无日志，等待任务写入…)';
+    if (atBottom) c.scrollTop = c.scrollHeight;
+    if (!r.running) {
+      clearInterval(liveLogTimer);
+      loadAccounts();
+    }
+  } catch(e) {}
+}
+$('#btnCloseLiveLog').addEventListener('click', closeLiveLogModal);
+
+// ---------- 2FA日志面板 ----------
+let totpLogEmail = null, totpLogTimer = null;
+
+function openTotpLog(email) {
+  totpLogEmail = email;
+  $('#totpLogEmail').textContent = email;
+  $('#totpLogPanel').classList.remove('hidden');
+  updateModalScrollLock();
+  $('#totpLogContent').textContent = '加载中…';
+  pollTotpLog();
+  clearInterval(totpLogTimer);
+  totpLogTimer = setInterval(pollTotpLog, 5000);
+}
+async function pollTotpLog() {
+  if (!totpLogEmail) return;
+  try {
+    const r = await api(`/api/accounts/totp-setup-log?email=${encodeURIComponent(totpLogEmail)}`);
+    const c = $('#totpLogContent');
+    const atBottom = c.scrollTop + c.clientHeight >= c.scrollHeight - 30;
+    c.textContent = r.log || '(暂无日志，等待任务写入…)';
+    if (atBottom) c.scrollTop = c.scrollHeight;
+    if (!r.running) {
+      clearInterval(totpLogTimer);
+      loadAccounts();
+    }
+  } catch(e) {}
+}
+function closeTotpLogModal() {
+  $('#totpLogPanel').classList.add('hidden');
+  updateModalScrollLock();
+  clearInterval(totpLogTimer);
+  totpLogTimer = null;
+  totpLogEmail = null;
+}
+$('#btnCloseTotpLog').addEventListener('click', closeTotpLogModal);
+
+let emailChangeLogAccountId = null, emailChangeLogTimer = null;
+function openEmailChangeLog(accountId) {
+  emailChangeLogAccountId = Number(accountId);
+  $('#emailChangeLogAccount').textContent = `账号 #${emailChangeLogAccountId}`;
+  $('#emailChangeLogPanel').classList.remove('hidden');
+  $('#emailChangeLogContent').textContent = '加载中…';
+  updateModalScrollLock();
+  pollEmailChangeLog();
+  clearInterval(emailChangeLogTimer);
+  emailChangeLogTimer = setInterval(pollEmailChangeLog, 3000);
+}
+async function pollEmailChangeLog() {
+  if (!emailChangeLogAccountId) return;
+  try {
+    const r = await api(`/api/accounts/${encodeURIComponent(emailChangeLogAccountId)}/change-email-log`);
+    const content = $('#emailChangeLogContent');
+    const atBottom = content.scrollTop + content.clientHeight >= content.scrollHeight - 30;
+    content.textContent = r.log || '(暂无换绑日志)';
+    $('#emailChangeLogAccount').textContent = `账号 #${emailChangeLogAccountId}${r.email ? ' · ' + r.email : ''}`;
+    if (atBottom) content.scrollTop = content.scrollHeight;
+    if (!r.running) clearInterval(emailChangeLogTimer);
+  } catch(e) {}
+}
+function closeEmailChangeLog() {
+  $('#emailChangeLogPanel').classList.add('hidden');
+  updateModalScrollLock();
+  clearInterval(emailChangeLogTimer);
+  emailChangeLogTimer = null;
+  emailChangeLogAccountId = null;
+}
+$('#btnCloseEmailChangeLog').addEventListener('click', closeEmailChangeLog);
+
+// 老 UI 查活兜底：捕获阶段直接拦截，避免被表格/按钮组其它事件吞掉。
+document.addEventListener('click', async (e) => {
+  const bulkBtn = e.target.closest('[data-live-check-selected]');
+  if (bulkBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    await checkSelectedLive(null, bulkBtn);
+    return;
+  }
+  const oneBtn = e.target.closest('[data-account-live-check]');
+  if (oneBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    await checkSelectedLive([Number(oneBtn.dataset.accountLiveCheck)], oneBtn);
+  }
+}, true);
+
+// 账号操作按钮（事件委托）
+$('#accountsBody').addEventListener('click', async (e) => {
+  const copySecretBtn = e.target.closest('[data-account-copy-secret]');
+  if (copySecretBtn) {
+    const id = Number(copySecretBtn.dataset.accountId);
+    const field = copySecretBtn.dataset.accountCopySecret;
+    copySecretBtn.disabled = true;
+    try {
+      const value = await fetchOneAccountSecret(id, field);
+      if (!value) { showToast('可复制内容为空'); return; }
+      copyText(value);
+      showToast(
+        field === 'access_token' ? 'Token 已复制' :
+        field === 'codex_agent_token' ? 'Agent Token 已复制' :
+        field === 'totp_secret' ? '2FA 密钥已复制' :
+        field === 'totp_code' ? `验证码已复制：${value}` :
+        '账号整行已复制'
+      );
+    } catch(err) {
+      showToast('复制失败: ' + err.message);
+    } finally {
+      copySecretBtn.disabled = false;
+    }
+    return;
+  }
+
+  const showTotpBtn = e.target.closest('[data-account-show-totp-code]');
+  if (showTotpBtn) {
+    await showAccountTotpCode(Number(showTotpBtn.dataset.accountShowTotpCode), showTotpBtn);
+    return;
+  }
+
+  const copyShownTotpBtn = e.target.closest('[data-account-copy-shown-totp-code]');
+  if (copyShownTotpBtn) {
+    const id = Number(copyShownTotpBtn.dataset.accountCopyShownTotpCode);
+    const cached = TOTP_CODE_CACHE.get(id);
+    if (!cached?.code) { showToast('请先点“看验证码”'); return; }
+    copyText(cached.code);
+    showToast(`验证码已复制：${cached.code}`);
+    return;
+  }
+
+  const planBtn = e.target.closest('[data-plan-check]');
+  if (planBtn) {
+    await checkOnePlan(Number(planBtn.dataset.planCheck), planBtn);
+    return;
+  }
+
+  const liveBtn = e.target.closest('[data-account-live-check]');
+  if (liveBtn) {
+    await checkSelectedLive([Number(liveBtn.dataset.accountLiveCheck)], liveBtn);
+    return;
+  }
+
+  const liveLogBtn = e.target.closest('[data-account-live-log]');
+  if (liveLogBtn) {
+    openLiveLog(liveLogBtn.dataset.accountLiveLog);
+    return;
+  }
+
+  const totpLogBtn = e.target.closest('[data-account-totp-log]');
+  if (totpLogBtn) {
+    openTotpLog(totpLogBtn.dataset.accountTotpLog);
+    return;
+  }
+
+  const delBtn = e.target.closest('[data-account-delete]');
+  if (delBtn) {
+    await deleteAccount(Number(delBtn.dataset.accountDelete), delBtn.dataset.email, delBtn);
+    return;
+  }
+
+  const archiveBtn = e.target.closest('[data-account-archive]');
+  if (archiveBtn) {
+    await archiveOneAccount(Number(archiveBtn.dataset.accountArchive), archiveBtn.dataset.archived === '1', archiveBtn);
+    return;
+  }
+
+  const noteBtn = e.target.closest('[data-account-note]');
+  if (noteBtn) {
+    await editAccountNote(Number(noteBtn.dataset.accountNote), noteBtn);
+    return;
+  }
+
+  const changeEmailBtn = e.target.closest('[data-account-change-email]');
+  if (changeEmailBtn) {
+    await changeAccountEmails([Number(changeEmailBtn.dataset.accountChangeEmail)]);
+    return;
+  }
+
+  const changeEmailLogBtn = e.target.closest('[data-account-change-email-log]');
+  if (changeEmailLogBtn) {
+    openEmailChangeLog(Number(changeEmailLogBtn.dataset.accountChangeEmailLog));
+    return;
+  }
+
+  const totpBtn = e.target.closest('[data-account-totp-setup]');
+  if (totpBtn) {
+    await setupAccountTotp(Number(totpBtn.dataset.accountTotpSetup), totpBtn);
+    return;
+  }
+
+  const agentBtn = e.target.closest('[data-codex-agent]');
+  if (agentBtn) {
+    await generateOneCodexAgent(Number(agentBtn.dataset.codexAgent), agentBtn);
+    return;
+  }
+
+  const agentDownloadBtn = e.target.closest('[data-codex-agent-download]');
+  if (agentDownloadBtn) {
+    downloadOneCodexAgent(Number(agentDownloadBtn.dataset.codexAgentDownload));
+    return;
+  }
+
+  const agentUploadSub2Btn = e.target.closest('[data-codex-agent-upload-sub2]');
+  if (agentUploadSub2Btn) {
+    await uploadOneCodexAgentSub2(Number(agentUploadSub2Btn.dataset.codexAgentUploadSub2), agentUploadSub2Btn);
+    return;
+  }
+
+  const qrBtn = e.target.closest('[data-qr-url]');
+  if (qrBtn) {
+    const url = qrBtn.dataset.qrUrl || '';
+    if (!url) { showToast('二维码地址为空'); return; }
+    openQrModal(url);
+    return;
+  }
+
+  const logBtn = e.target.closest('[data-codex-log]');
+  if (logBtn) {
+    openRetryLog(logBtn.dataset.codexLog);
+    return;
+  }
+
+  const stopCodexBtn = e.target.closest('[data-codex-stop]');
+  if (stopCodexBtn) {
+    const email = stopCodexBtn.dataset.codexStop;
+    if (!confirm(`确定停止该账号的 Codex 补跑吗？\n\n${email}\n\n会发送停止信号并将状态标记为“已停止”。`)) return;
+    stopCodexBtn.disabled = true;
+    try {
+      const r = await api('/api/codex/stop', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email}) });
+      showToast(r.message || '已发送停止信号');
+      if (retryLogEmail === email) pollRetryLog();
+      loadAccounts();
+    } catch(err) {
+      showToast('停止失败: ' + err.message);
+      stopCodexBtn.disabled = false;
+    }
+    return;
+  }
+
+  const resetBtn = e.target.closest('[data-codex-reset-retrying]');
+  if (resetBtn) {
+    const email = resetBtn.dataset.codexResetRetrying;
+    if (!confirm(`确定重置该账号的 Codex「补跑中」状态吗？\n\n${email}\n\n重置后状态会变为“失败”，可再次点击“补跑 Codex”。`)) return;
+    resetBtn.disabled = true;
+    try {
+      const r = await api('/api/codex/reset-retrying', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, status:'failed'}) });
+      showToast(r.message || '已重置补跑状态');
+      if (retryLogEmail === email) {
+        clearInterval(retryLogTimer);
+        pollRetryLog();
+      }
+      loadAccounts();
+    } catch(err) {
+      showToast('重置失败: ' + err.message);
+      resetBtn.disabled = false;
+    }
+    return;
+  }
+
+  const btn = e.target.closest('[data-codex-retry]');
+  if (!btn) return;
+  const email = btn.dataset.codexRetry;
+  if (!confirm(`重新跑 Codex 授权？\n\n${email}\n\n将消耗：\n  • 1 封邮箱 OTP（自动收）\n  • 1 个接码短信（约 $0.13）\n\n补跑会在后台进行（~1-2 分钟），完成后状态自动更新。`)) return;
+  btn.disabled = true;
+  try {
+    const r = await api('/api/codex/retry', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email}) });
+    showToast(r.message || '已开始补跑');
+    loadAccounts();
+    openRetryLog(email);
+    const poll = setInterval(async () => {
+      const acc = ACCOUNTS.find(a => a.email === email);
+      if (!acc || acc.codex_status !== 'retrying') clearInterval(poll);
+    }, 15000);
+    setTimeout(() => clearInterval(poll), 5 * 60 * 1000);
+  } catch(err) {
+    showToast('触发补跑失败: ' + err.message);
+    btn.disabled = false;
+  }
+});
+$('#accountsBody').addEventListener('change', (e) => {
+  const cb = e.target.closest('.account-row-check');
+  if (!cb) return;
+  const id = Number(cb.dataset.accountId);
+  if (cb.checked) ACCOUNT_SELECTED.add(id);
+  else ACCOUNT_SELECTED.delete(id);
+  updateAccountSelectionUi();
+});
+$('#accountsSelectAll').addEventListener('change', (e) => {
+  const pageRows = ACCOUNTS;
+  if (e.target.checked) pageRows.forEach(r => ACCOUNT_SELECTED.add(Number(r.id)));
+  else pageRows.forEach(r => ACCOUNT_SELECTED.delete(Number(r.id)));
+  renderAccounts();
+});
+$('#btnDeleteSelectedAccounts').addEventListener('click', deleteSelectedAccounts);
+$('#btnArchiveSelectedAccounts').addEventListener('click', archiveSelectedAccounts);
+$('#btnCopySelectedLines').addEventListener('click', copySelectedAccountLines);
+$('#btnCopySelectedTokens').addEventListener('click', copySelectedAccountTokens);
+$('#btnDownloadSelectedTxt').addEventListener('click', downloadSelectedAccountTxt);
+$('#btnNoteSelectedAccounts').addEventListener('click', noteSelectedAccounts);
+$('#btnSetupSelectedTotp').addEventListener('click', setupSelectedTotp);
+$('#btnChangeSelectedEmails').addEventListener('click', () => changeAccountEmails(Array.from(ACCOUNT_SELECTED)));
+$('#btnExtractSelectedLinks').addEventListener('click', () => { window.location.assign('/?ui=modern#upi-zero'); });
+$('#btnRetrySelectedCodex').addEventListener('click', retrySelectedCodex);
+$('#btnDownloadSelectedCpa').addEventListener('click', downloadSelectedCpa);
+$('#btnStopSelectedCodex').addEventListener('click', stopSelectedCodex);
+$('#btnCheckSelectedPlans').addEventListener('click', checkSelectedPlans);
+$('#showArchivedAccounts').addEventListener('change', async (e) => {
+  SHOW_ARCHIVED_ACCOUNTS = !!e.target.checked;
+  ACCOUNT_SELECTED.clear();
+  PAGERS.accounts.page = 1;
+  await loadAccounts();
+  await pollAccountPlanStatuses();
+});
+$('#showPlusAccountsOnly').addEventListener('change', async (e) => {
+  SHOW_PLUS_ACCOUNTS_ONLY = !!e.target.checked;
+  if (SHOW_PLUS_ACCOUNTS_ONLY) {
+    SHOW_PLUS_TRIAL_ACCOUNTS_ONLY = false;
+    SHOW_FREE_ACCOUNTS_ONLY = false;
+    $('#showPlusTrialAccountsOnly').checked = false;
+    $('#showFreeAccountsOnly').checked = false;
+  }
+  ACCOUNT_SELECTED.clear();
+  PAGERS.accounts.page = 1;
+  await loadAccounts();
+  await pollAccountPlanStatuses();
+});
+$('#showPlusTrialAccountsOnly').addEventListener('change', async (e) => {
+  SHOW_PLUS_TRIAL_ACCOUNTS_ONLY = !!e.target.checked;
+  if (SHOW_PLUS_TRIAL_ACCOUNTS_ONLY) {
+    SHOW_PLUS_ACCOUNTS_ONLY = false;
+    SHOW_FREE_ACCOUNTS_ONLY = false;
+    $('#showPlusAccountsOnly').checked = false;
+    $('#showFreeAccountsOnly').checked = false;
+  }
+  ACCOUNT_SELECTED.clear();
+  PAGERS.accounts.page = 1;
+  await loadAccounts();
+  await pollAccountPlanStatuses();
+});
+$('#showFreeAccountsOnly').addEventListener('change', async (e) => {
+  SHOW_FREE_ACCOUNTS_ONLY = !!e.target.checked;
+  if (SHOW_FREE_ACCOUNTS_ONLY) {
+    SHOW_PLUS_ACCOUNTS_ONLY = false;
+    SHOW_PLUS_TRIAL_ACCOUNTS_ONLY = false;
+    $('#showPlusAccountsOnly').checked = false;
+    $('#showPlusTrialAccountsOnly').checked = false;
+  }
+  ACCOUNT_SELECTED.clear();
+  PAGERS.accounts.page = 1;
+  await loadAccounts();
+  await pollAccountPlanStatuses();
+});
+$('#btnRefreshAccounts').addEventListener('click', async () => {
+  const btn = $('#btnRefreshAccounts');
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '刷新中…';
+  try {
+    planStatusRevision = '';
+    await loadAccounts();
+    await pollAccountPlanStatuses();
+    loadSummary();
+    showToast('账号列表已刷新');
+  } catch(e) {
+    showToast('刷新账号失败: ' + e.message);
+  } finally {
+    btn.textContent = old;
+    btn.disabled = false;
+  }
+});
+
+
+async function fetchAccountSecrets(ids, field) {
+  const r = await api('/api/accounts/secret-bulk', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({account_ids: ids, field}),
+  });
+  return (r.values || []).map(x => x.value).filter(Boolean);
+}
+
+async function fetchOneAccountSecret(id, field) {
+  const r = await api(`/api/accounts/${encodeURIComponent(id)}/secret?field=${encodeURIComponent(field)}`);
+  return r.value || '';
+}
+
+async function fetchAccountTotpCode(id) {
+  const r = await api(`/api/accounts/${encodeURIComponent(id)}/secret?field=totp_code`);
+  return r.value || '';
+}
+
+async function showAccountTotpCode(id, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const code = await fetchAccountTotpCode(id);
+    if (!code) { showToast('当前验证码为空'); return; }
+    TOTP_CODE_CACHE.set(Number(id), { code, at: new Date().toLocaleString() });
+    renderAccounts();
+    showToast(`验证码：${code}`);
+  } catch (err) {
+    showToast('获取验证码失败: ' + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function setupAccountTotp(id, btn) {
+  const acc = ACCOUNTS.find(a => Number(a.id) === Number(id));
+  const email = acc?.email || '';
+  if (!confirm(`确定为该账号开启 2FA？\n\n${email}\n\n完成后会把 TOTP 密钥写回账号信息。`)) return;
+  if (btn) btn.disabled = true;
+  try {
+    const r = await api(`/api/accounts/${encodeURIComponent(id)}/totp-setup`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({}),
+    });
+    showToast(r.message || '2FA 已开始开启');
+    planStatusRevision = '';
+    await loadAccounts();
+    await pollAccountPlanStatuses();
+  } catch (err) {
+    showToast('开启 2FA 失败: ' + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function changeAccountEmails(ids) {
+  ids = (ids || []).map(Number).filter(Boolean);
+  if (!ids.length) { showToast('请先选择账号'); return; }
+  const source = prompt('请输入新邮箱来源：\noutlook / generic_api / imap / cloudflare_domain / cloudflare / gptmail / mailnest / cloudmail / remail', 'outlook');
+  if (!source) return;
+  try {
+    const url = ids.length === 1 ? `/api/accounts/${ids[0]}/change-email` : '/api/accounts/change-email-bulk';
+    const body = ids.length === 1 ? {source:source.trim()} : {source:source.trim(), account_ids:ids};
+    const r = await api(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    ACCOUNT_SELECTED.clear();
+    showToast(ids.length === 1 ? '邮箱换绑任务已开始' : `已开始 ${r.started_count || 0} 个，跳过 ${(r.skipped || []).length} 个`);
+    loadAccounts();
+    const poll = setInterval(loadAccounts, 5000); setTimeout(() => clearInterval(poll), 10 * 60 * 1000);
+  } catch(e) { showToast('邮箱换绑失败: ' + e.message); }
+}
+
+async function setupSelectedTotp() {
+  const ids = Array.from(ACCOUNT_SELECTED).map(Number);
+  if (!ids.length) { showToast('请先选择账号'); return; }
+  if (!confirm(`确定为选中的 ${ids.length} 个账号批量开启 2FA？\n\n任务会在后台排队执行，完成后自动把 TOTP 密钥写回账号信息。\n已经开启、没有 Token 或正在设置中的账号会自动跳过。`)) return;
+
+  const btn = $('#btnSetupSelectedTotp');
+  if (!btn) return;
+  const oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '入队中…';
+  try {
+    const r = await api('/api/accounts/totp-setup-bulk', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({account_ids: ids}),
+    });
+    (r.started || []).forEach(item => ACCOUNT_SELECTED.delete(Number(item.id)));
+    const skippedCount = Number(r.skipped_count ?? (r.skipped || []).length) || 0;
+    const busyCount = Number(r.busy_count ?? (r.busy || []).length) || 0;
+    const failedCount = Number(r.failed_count ?? (r.failed || []).length) || 0;
+    const details = [];
+    if (skippedCount) details.push(`跳过 ${skippedCount} 个`);
+    if (busyCount) details.push(`进行中 ${busyCount} 个`);
+    if (failedCount) details.push(`失败 ${failedCount} 个`);
+    showToast(`已入队 ${r.started_count || 0} 个${details.length ? '，' + details.join('，') : ''}`);
+    planStatusRevision = '';
+    await loadAccounts();
+    await pollAccountPlanStatuses();
+  } catch (err) {
+    showToast('批量开启 2FA 失败: ' + err.message);
+  } finally {
+    btn.textContent = oldText;
+    updateAccountSelectionUi();
+  }
+}
+
+async function copySelectedAccountLines() {
+  const ids = Array.from(ACCOUNT_SELECTED).map(Number);
+  if (!ids.length) { showToast('请先选择账号'); return; }
+  try {
+    const lines = await fetchAccountSecrets(ids, 'copy_line');
+    if (!lines.length) { showToast('选中账号没有可复制整行'); return; }
+    copyText(lines.join('\n'));
+    showToast(`已复制 ${lines.length} 行`);
+  } catch(err) { showToast('复制失败: ' + err.message); }
+}
+
+async function copySelectedAccountTokens() {
+  const ids = Array.from(ACCOUNT_SELECTED).map(Number);
+  if (!ids.length) { showToast('请先选择账号'); return; }
+  try {
+    const lines = await fetchAccountSecrets(ids, 'access_token');
+    if (!lines.length) { showToast('选中账号没有可复制 Token'); return; }
+    copyText(lines.join('\n'));
+    showToast(`已复制 ${lines.length} 个 Token`);
+  } catch(err) { showToast('复制失败: ' + err.message); }
+}
+
+async function downloadSelectedAccountTxt() {
+  const ids = Array.from(ACCOUNT_SELECTED).map(Number);
+  if (!ids.length) { showToast('请先选择账号'); return; }
+  let lines = [];
+  try {
+    lines = await fetchAccountSecrets(ids, 'copy_line');
+  } catch(err) { showToast('生成 TXT 失败: ' + err.message); return; }
+  if (!lines.length) { showToast('选中账号没有可下载整行'); return; }
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const filename = `accounts-selected-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.txt`;
+  const blob = new Blob(['\ufeff' + lines.join('\n') + '\n'], {type: 'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 800);
+  showToast(`已下载 ${lines.length} 个账号 TXT`);
+}
+
+async function downloadSelectedCpa() {
+  const ids = Array.from(ACCOUNT_SELECTED);
+  if (ids.length === 0) { showToast('请先选择账号'); return; }
+  const selectedAccounts = ids.map(id => ACCOUNTS.find(a => Number(a.id) === Number(id))).filter(Boolean);
+  const missingCodex = selectedAccounts.filter(a => (a.codex_status || '') !== 'success').length;
+  let msg = `确定从 CPA 下载选中的 ${ids.length} 个账号的 CPA/Codex JSON 吗？\n\n会按账号邮箱匹配 CPA auth-files，成功的文件会打包成 ZIP。`;
+  if (missingCodex) msg += `\n\n其中 ${missingCodex} 个账号本地 Codex 状态不是 success，若 CPA 端没有文件会写入 manifest 错误清单。`;
+  if (!confirm(msg)) return;
+  const btn = $('#btnDownloadSelectedCpa');
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '下载中…';
+  try {
+    // 先由服务端准备 ZIP，再用同源 GET 顶层下载。
+    // 这样比隐藏 iframe / blob URL 更像普通用户点击下载，Chrome 不容易挂起或标记“不安全下载”。
+    const r = await api('/api/accounts/download-cpa-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_ids: ids, prepare: true}),
+    });
+    if (!r.download_url) throw new Error('服务端未返回下载地址');
+    const a = document.createElement('a');
+    a.href = r.download_url;
+    a.download = r.filename || '';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => a.remove(), 1000);
+    showToast(`已生成 ZIP，开始下载${r.error_count ? `（${r.error_count} 个失败见 manifest）` : ''}`);
+    setTimeout(loadCodex, 1200);
+  } catch(err) {
+    showToast('下载 CPA 失败: ' + err.message);
+  } finally {
+    setTimeout(() => {
+      btn.textContent = old;
+      updateAccountSelectionUi();
+    }, 1200);
+  }
+}
+
+async function checkOnePlan(id, btn) {
+  btn.disabled = true;
+  const old = btn.textContent;
+  btn.textContent = '查询中…';
+  try {
+    const r = await api('/api/accounts/check-plan', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_id: id}),
+    });
+    showToast(r.message || '套餐查询已加入后台队列');
+    await pollAccountPlanStatuses();
+  } catch(err) {
+    showToast(err.message);
+    await pollAccountPlanStatuses();
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+}
+
+async function generateOneCodexAgent(id, btn) {
+  const acc = ACCOUNTS.find(a => Number(a.id) === Number(id));
+  if (!acc) { showToast('账号不存在'); return; }
+  if (!acc.has_access_token) { showToast('该账号没有 access_token'); return; }
+  if (!confirm(`确定为该账号生成 Codex Agent Token 吗？\n\n${acc.email || ('#' + id)}\n\n会调用 auth.openai.com 注册 agent_identity，并保存到本地账号记录。`)) return;
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '生成中…';
+  try {
+    await api('/api/accounts/codex-agent', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_id: id}),
+    });
+    showToast('Codex Agent Token 生成任务已入队');
+    await pollAccountPlanStatuses();
+  } catch(err) {
+    showToast('生成失败: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+}
+
+async function generateSelectedCodexAgents() {
+  const ids = Array.from(ACCOUNT_SELECTED);
+  if (ids.length === 0) { showToast('请先选择账号'); return; }
+  const selected = ids.map(id => ACCOUNTS.find(a => Number(a.id) === Number(id))).filter(Boolean);
+  const eligible = selected.filter(a => a.has_access_token);
+  if (!eligible.length) { showToast('选中账号里没有可用 access_token'); return; }
+  if (!confirm(`确定批量生成 ${eligible.length} 个 Codex Agent Token 吗？\n\n缺少 access_token 的账号会自动跳过。`)) return;
+  const btn = $('#btnGenerateSelectedAgent');
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '生成中…';
+  try {
+    const r = await api('/api/accounts/codex-agent-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_ids: ids}),
+    });
+    const skipped = (r.skipped_count || 0) + (r.busy_count || 0) + (r.failed_count || 0);
+    showToast(skipped ? `已入队 ${r.started_count || 0} 个，跳过/失败 ${skipped} 个` : `已入队 ${r.started_count || 0} 个`);
+    await pollAccountPlanStatuses();
+  } catch(err) {
+    showToast('批量生成失败: ' + err.message);
+    updateAccountSelectionUi();
+  } finally {
+    btn.textContent = old;
+  }
+}
+
+async function uploadOneCodexAgentSub2(id, btn) {
+  const acc = ACCOUNTS.find(a => Number(a.id) === Number(id));
+  if (!acc) { showToast('账号不存在'); return; }
+  if ((acc.codex_agent_status || '') !== 'success') { showToast('该账号还没有生成 Agent Token'); return; }
+  if (!confirm(`确定上传该账号 Agent Token 到 sub2api 吗？\n\n${acc.email || ('#' + id)}`)) return;
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '上传中…';
+  try {
+    await api(`/api/accounts/${encodeURIComponent(id)}/codex-agent/upload-sub2`, { method:'POST' });
+    showToast('Agent Token 已上传 sub2api');
+    await pollAccountPlanStatuses();
+  } catch(err) {
+    showToast('上传 sub2 失败: ' + err.message);
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+}
+
+async function uploadSelectedCodexAgentSub2() {
+  const ids = Array.from(ACCOUNT_SELECTED);
+  if (ids.length === 0) { showToast('请先选择账号'); return; }
+  const selected = ids.map(id => ACCOUNTS.find(a => Number(a.id) === Number(id))).filter(Boolean);
+  const ready = selected.filter(a => (a.codex_agent_status || '') === 'success');
+  if (!ready.length) { showToast('选中账号里没有已生成的 Agent Token'); return; }
+  if (!confirm(`确定上传选中的 ${ready.length} 个 Agent Token 到 sub2api 吗？\n\n未生成成功的账号会自动跳过。`)) return;
+  const btn = $('#btnUploadSelectedAgentSub2');
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '上传中…';
+  try {
+    const r = await api('/api/accounts/codex-agent/upload-sub2-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_ids: ids}),
+    });
+    const skipped = (r.skipped_count || 0) + (r.failed_count || 0);
+    showToast(skipped ? `已上传 ${r.uploaded_count || 0} 个，跳过/失败 ${skipped} 个` : `已上传 ${r.uploaded_count || 0} 个`);
+    await pollAccountPlanStatuses();
+  } catch(err) {
+    showToast('批量上传 sub2 失败: ' + err.message);
+    updateAccountSelectionUi();
+  } finally {
+    btn.textContent = old;
+  }
+}
+
+function _ensureDownloadFrame(name) {
+  let iframe = document.querySelector(`iframe[name="${name}"]`);
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.name = name;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+  }
+  return iframe;
+}
+
+function downloadOneCodexAgent(id) {
+  const acc = ACCOUNTS.find(a => Number(a.id) === Number(id));
+  if (!acc) { showToast('账号不存在'); return; }
+  if ((acc.codex_agent_status || '') !== 'success') { showToast('该账号还没有生成 Agent Token'); return; }
+  _ensureDownloadFrame('codexAgentDownloadFrame');
+  const a = document.createElement('a');
+  a.href = `/api/accounts/${encodeURIComponent(id)}/codex-agent/download`;
+  a.target = 'codexAgentDownloadFrame';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => a.remove(), 1000);
+  showToast('已提交 Agent Token 下载');
+}
+
+function downloadSelectedCodexAgents() {
+  const ids = Array.from(ACCOUNT_SELECTED);
+  if (ids.length === 0) { showToast('请先选择账号'); return; }
+  const selected = ids.map(id => ACCOUNTS.find(a => Number(a.id) === Number(id))).filter(Boolean);
+  const ready = selected.filter(a => (a.codex_agent_status || '') === 'success');
+  if (!ready.length) { showToast('选中账号里没有已生成的 Agent Token'); return; }
+  if (!confirm(`确定下载选中的 ${ready.length} 个 Codex Agent Token 吗？\n\n未生成成功的账号会自动跳过，文件会打包 ZIP。`)) return;
+  const btn = $('#btnDownloadSelectedAgent');
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '下载中…';
+  try {
+    const frameName = 'codexAgentBulkDownloadFrame';
+    _ensureDownloadFrame(frameName);
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/api/accounts/codex-agent/download-bulk';
+    form.target = frameName;
+    form.style.display = 'none';
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'account_ids';
+    input.value = JSON.stringify(ids);
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(() => form.remove(), 30000);
+    showToast('已提交 Agent Token ZIP 下载');
+  } catch(err) {
+    showToast('下载 Agent Token 失败: ' + err.message);
+  } finally {
+    setTimeout(() => {
+      btn.textContent = old;
+      updateAccountSelectionUi();
+    }, 1200);
+  }
+}
+
+async function checkSelectedPlans() {
+  const ids = Array.from(ACCOUNT_SELECTED);
+  if (ids.length === 0) { showToast('请先选择账号'); return; }
+  const workersEl = $('#codexBulkWorkers');
+  const workers = Math.max(1, Math.min(16, Number(workersEl?.value || 3)));
+  const btn = $('#btnCheckSelectedPlans');
+  btn.disabled = true;
+  const old = btn.textContent;
+  btn.textContent = '查询中…';
+  try {
+    const r = await api('/api/accounts/check-plan-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_ids: ids, workers}),
+    });
+    const failed = r.failed_count || 0;
+    const busy = r.busy_count || 0;
+    showToast(`已入队 ${r.started_count || 0} 个，查询中跳过 ${busy} 个，入队失败 ${failed} 个`);
+    await pollAccountPlanStatuses();
+  } catch(err) {
+    showToast('批量查询失败: ' + err.message);
+    updateAccountSelectionUi();
+  } finally {
+    btn.textContent = old;
+  }
+}
+
+async function checkSelectedLive(idsArg = null, btnArg = null) {
+  const ids = idsArg || Array.from(ACCOUNT_SELECTED);
+  if (ids.length === 0) { showToast('请先选择账号'); return; }
+  const workers = getCodexBulkWorkers();
+  const msg = idsArg ? `确定查活这个账号并刷新最新 AT/accessToken 吗？` : `确定查活选中的 ${ids.length} 个账号吗？
+
+会重新登录邮箱 OTP；登录成功且未封号则标记正常，并刷新最新 AT/accessToken。
+
+并发线程数：${workers}`;
+  if (!confirm(msg)) return;
+  const firstAcc = ACCOUNTS.find(a => Number(a.id) === Number(ids[0]));
+  const btn = btnArg || $('#btnCheckSelectedLive');
+  const old = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '查活中…';
+  }
+  try {
+    const r = await api('/api/accounts/check-live-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_ids: ids, workers}),
+    });
+    const skipped = (r.skipped || []).length;
+    showToast(`查活已入队 ${r.started_count || 0} 个，忙碌 ${r.busy_count || 0} 个，失败 ${r.failed_count || 0}${skipped ? `，跳过 ${skipped}` : ''}`);
+    const firstStarted = (r.started || [])[0];
+    if (firstStarted?.email) openLiveLog(firstStarted.email);
+    else if (firstAcc && firstAcc.email) openLiveLog(firstAcc.email);
+    await loadAccounts();
+    loadSummary();
+  } catch(err) {
+    showToast('查活失败: ' + err.message);
+    updateAccountSelectionUi();
+  } finally {
+    if (btn) {
+      btn.textContent = old;
+      btn.disabled = false;
+    }
+  }
+}
+
+async function deleteAccount(id, email, btn) {
+  if (!confirm(`确定删除账号 #${id}？\n\n${email || ''}\n\n会从本地账号列表、注册成功邮箱和 token 文件中移除。`)) return;
+  btn.disabled = true;
+  try {
+    await api(`/api/accounts/${id}/delete`, { method:'POST', headers:{'Content-Type':'application/json'}, body: '{}' });
+    ACCOUNT_SELECTED.delete(Number(id));
+    showToast('账号已删除');
+    loadAccounts(); loadSummary();
+  } catch(err) {
+    showToast('删除失败: ' + err.message);
+    btn.disabled = false;
+  }
+}
+
+async function archiveOneAccount(id, archived, btn) {
+  const acc = ACCOUNTS.find(a => Number(a.id) === Number(id));
+  const email = acc?.email || '';
+  const action = archived ? '归档' : '恢复';
+  if (!confirm(`确定${action}账号 #${id}？\n\n${email}\n\n${archived ? '归档后默认账号列表不会查询/显示它，可勾选“查看归档”单独查看。' : '恢复后会回到默认账号列表。'}`)) return;
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = `${action}中…`;
+  try {
+    await api(`/api/accounts/${id}/archive`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({archived}),
+    });
+    ACCOUNT_SELECTED.delete(Number(id));
+    showToast(archived ? '账号已归档' : '账号已恢复');
+    loadAccounts(); loadSummary();
+  } catch(err) {
+    showToast(`${action}失败: ` + err.message);
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+}
+
+async function archiveSelectedAccounts() {
+  const ids = Array.from(ACCOUNT_SELECTED);
+  if (ids.length === 0) { showToast('请先选择账号'); return; }
+  const archived = !SHOW_ARCHIVED_ACCOUNTS;
+  const action = archived ? '归档' : '恢复';
+  if (!confirm(`确定${action}选中的 ${ids.length} 个账号吗？\n\n${archived ? '归档后默认账号列表不会查询/显示这些账号，可勾选“查看归档”单独查看。' : '恢复后这些账号会回到默认账号列表。'}`)) return;
+  const btn = $('#btnArchiveSelectedAccounts');
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = `${action}中…`;
+  try {
+    const r = await api('/api/accounts/archive-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_ids: ids, archived}),
+    });
+    (r.updated || []).forEach(item => ACCOUNT_SELECTED.delete(Number(item.id)));
+    const skippedCount = (r.skipped || []).length;
+    showToast(skippedCount ? `已${action} ${r.updated_count || 0} 个，跳过 ${skippedCount} 个` : `已${action} ${r.updated_count || 0} 个`);
+    loadAccounts(); loadSummary();
+  } catch(err) {
+    showToast(`批量${action}失败: ` + err.message);
+    updateAccountSelectionUi();
+  } finally {
+    btn.textContent = old;
+  }
+}
+
+async function deleteSelectedAccounts() {
+  const ids = Array.from(ACCOUNT_SELECTED);
+  if (ids.length === 0) { showToast('请先选择账号'); return; }
+  if (!confirm(`确定删除选中的 ${ids.length} 个账号吗？\n\n会从本地账号列表、注册成功邮箱和 token 文件中移除。`)) return;
+  $('#btnDeleteSelectedAccounts').disabled = true;
+  try {
+    const r = await api('/api/accounts/delete-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_ids: ids}),
+    });
+    (r.deleted || []).forEach(item => ACCOUNT_SELECTED.delete(Number(item.id)));
+    const skippedCount = (r.skipped || []).length;
+    showToast(skippedCount ? `已删除 ${r.deleted_count || 0} 个，跳过 ${skippedCount} 个` : `已删除 ${r.deleted_count || 0} 个`);
+    loadAccounts(); loadSummary();
+  } catch(err) {
+    showToast('批量删除失败: ' + err.message);
+    updateAccountSelectionUi();
+  }
+}
+
+async function editAccountNote(id, btn) {
+  const acc = ACCOUNTS.find(a => Number(a.id) === Number(id));
+  if (!acc) { showToast('账号不存在'); return; }
+  const note = prompt(`设置账号备注（留空可清空）\n\n${acc.email || ('#' + id)}`, acc.note || '');
+  if (note === null) return;
+  if (note.length > 2000) { showToast('备注最多 2000 个字符'); return; }
+  btn.disabled = true;
+  try {
+    await api(`/api/accounts/${id}/note`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({note}),
+    });
+    showToast(note ? '备注已保存' : '备注已清空');
+    loadAccounts();
+  } catch(err) {
+    showToast('保存备注失败: ' + err.message);
+    btn.disabled = false;
+  }
+}
+
+async function noteSelectedAccounts() {
+  const ids = Array.from(ACCOUNT_SELECTED);
+  if (ids.length === 0) { showToast('请先选择账号'); return; }
+  const note = prompt(`给选中的 ${ids.length} 个账号设置统一备注（留空可清空）`, '');
+  if (note === null) return;
+  if (note.length > 2000) { showToast('备注最多 2000 个字符'); return; }
+  const btn = $('#btnNoteSelectedAccounts');
+  btn.disabled = true;
+  try {
+    const r = await api('/api/accounts/note-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_ids: ids, note}),
+    });
+    const skippedCount = (r.skipped || []).length;
+    showToast(skippedCount ? `已备注 ${r.updated_count || 0} 个，跳过 ${skippedCount} 个` : `已备注 ${r.updated_count || 0} 个`);
+    loadAccounts();
+  } catch(err) {
+    showToast('批量备注失败: ' + err.message);
+    updateAccountSelectionUi();
+  }
+}
+
+
+async function stopSelectedCodex() {
+  const ids = Array.from(ACCOUNT_SELECTED);
+  if (ids.length === 0) { showToast('请先选择账号'); return; }
+  const selectedAccounts = ids.map(id => ACCOUNTS.find(a => Number(a.id) === Number(id))).filter(Boolean);
+  const retrying = selectedAccounts.filter(a => (a.codex_status || '') === 'retrying');
+  if (retrying.length === 0) { showToast('选中账号里没有正在补跑的 Codex'); return; }
+  if (!confirm(`确定停止选中的 ${retrying.length} 个 Codex 补跑吗？\n\n会发送停止信号，并将状态标记为“已停止”。`)) return;
+  const btn = $('#btnStopSelectedCodex');
+  btn.disabled = true;
+  try {
+    const r = await api('/api/codex/stop-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_ids: retrying.map(a => a.id)}),
+    });
+    const skippedCount = (r.skipped || []).length;
+    showToast(skippedCount ? `已停止 ${r.stopped_count || 0} 个，跳过 ${skippedCount} 个` : `已停止 ${r.stopped_count || 0} 个`);
+    loadAccounts();
+    if (retryLogEmail) pollRetryLog();
+  } catch(err) {
+    showToast('停止选中补跑失败: ' + err.message);
+    updateAccountSelectionUi();
+  }
+}
+
+async function retrySelectedCodex() {
+  const ids = Array.from(ACCOUNT_SELECTED);
+  if (ids.length === 0) { showToast('请先选择账号'); return; }
+  const workersEl = $('#codexBulkWorkers');
+  const workers = Math.max(1, Math.min(16, Number(workersEl?.value || 1)));
+  if (workersEl) workersEl.value = workers;
+  const selectedAccounts = ids.map(id => ACCOUNTS.find(a => Number(a.id) === Number(id))).filter(Boolean);
+  const retryingCount = selectedAccounts.filter(a => (a.codex_status || '') === 'retrying').length;
+  const deactivatedCount = selectedAccounts.filter(a => (a.live_check_status || '') === 'deactivated').length;
+  let msg = `批量补跑选中的 ${ids.length} 个账号 Codex 授权？
+
+并发线程数：${workers}
+
+将按账号消耗邮箱 OTP 和接码短信。`;
+  if (retryingCount || deactivatedCount) msg += `
+
+其中：补跑中 ${retryingCount} 个、已废号 ${deactivatedCount} 个会自动跳过。`;
+  if (!confirm(msg)) return;
+  const btn = $('#btnRetrySelectedCodex');
+  btn.disabled = true;
+  try {
+    const r = await api('/api/codex/retry-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({account_ids: ids, workers}),
+    });
+    const skippedCount = (r.skipped || []).length;
+    showToast(skippedCount ? `已开始 ${r.started_count || 0} 个，跳过 ${skippedCount} 个` : (r.message || '已开始批量补跑'));
+    loadAccounts();
+    const first = (r.started || [])[0];
+    if (first && first.email) openRetryLog(first.email);
+    const poll = setInterval(loadAccounts, 15000);
+    setTimeout(() => clearInterval(poll), 10 * 60 * 1000);
+  } catch(err) {
+    showToast('批量补跑失败: ' + err.message);
+    updateAccountSelectionUi();
+  }
+}
+
+$('#qAccounts').addEventListener('input', debounce(() => { ACCOUNT_SELECTED.clear(); PAGERS.accounts.page = 1; loadAccounts(); }, 250));
+$('#codexStatusFilter').addEventListener('change', () => { ACCOUNT_SELECTED.clear(); PAGERS.accounts.page = 1; loadAccounts(); });
+$('#totpStatusFilter').addEventListener('change', () => { ACCOUNT_SELECTED.clear(); PAGERS.accounts.page = 1; loadAccounts(); });
+$('#copyAllTokens').addEventListener('click', async () => {
+  const ids = ACCOUNTS.filter(r => r.has_access_token).map(r => Number(r.id));
+  if (!ids.length) { showToast('当前页没有 Token'); return; }
+  try { copyText((await fetchAccountSecrets(ids, 'access_token')).join('\n')); } catch(e) { showToast('复制失败: ' + e.message); }
+});
+$('#copyAllLines').addEventListener('click', async () => {
+  const ids = ACCOUNTS.map(r => Number(r.id));
+  if (!ids.length) { showToast('当前页没有账号'); return; }
+  try { copyText((await fetchAccountSecrets(ids, 'copy_line')).join('\n')); } catch(e) { showToast('复制失败: ' + e.message); }
+});
+
+// ---------- 邮箱池 ----------
+function poolKey(r) { return `${r.source || $('#poolSource')?.value || 'all'}|${r.email || ''}`; }
+function poolLabel(src) {
+  return ({outlook:'Outlook', generic_api:'通用API', imap:'通用IMAP', cloudflare_domain:'域名邮箱'})[src] || src || '-';
+}
+async function loadOutlook() {
+  try {
+    const source = $('#poolSource')?.value || 'outlook';
+    const q = $('#qOutlook') ? $('#qOutlook').value.trim() : '';
+    const p = PAGERS.outlook;
+    const res = await api(`/api/outlook?paged=1&page=${encodeURIComponent(p.page)}&page_size=${encodeURIComponent(p.size)}&source=${encodeURIComponent(source)}&q=${encodeURIComponent(q)}`);
+    OUTLOOK = res.items || [];
+    OUTLOOK_TOTAL = Number(res.total || OUTLOOK.length || 0);
+    const totalPages = Math.max(1, Math.ceil(OUTLOOK_TOTAL / p.size));
+    if (p.page > totalPages) { p.page = totalPages; return loadOutlook(); }
+    renderOutlook();
+  } catch(e) {}
+}
+function renderOutlook() {
+  const total = OUTLOOK_TOTAL;
+  const rows = OUTLOOK;
+  $('#outlookBody').innerHTML = rows.map(r => `
+    <tr>
+      <td><input type="checkbox" class="outlook-row-check" data-email="${esc(r.email)}" data-source="${esc(r.source || $('#poolSource')?.value || 'all')}" ${OUTLOOK_SELECTED.has(poolKey(r)) ? 'checked' : ''}></td>
+      <td><div class="main-cell">${esc(r.email)}</div><div class="sub-cell mono">${esc(short(r.copy_line, 70))}</div></td>
+      <td>${esc(poolLabel(r.source))}</td>
+      <td>${pill(r.status)}</td>
+      <td><span class="mono">${esc(short(r.access_token || '', 36) || '未生成')}</span></td>
+      <td class="muted">${esc(r.imported_at || r.created_at || '-')}</td>
+      <td class="muted">${esc(r.used_at || '-')}</td>
+      <td class="actions">
+        ${cbtn('复制邮箱', r.copy_line)} ${cbtn('复制Token', r.access_token, 'primary')} ${cbtn('复制整行', r.account_copy_line, 'good')}
+        ${r.status !== 'available'
+          ? `<button data-pool-act="available" data-email="${esc(r.email)}" data-source="${esc(r.source || $('#poolSource')?.value || 'all')}">恢复可用</button>`
+          : ''}
+        ${r.status !== 'disabled'
+          ? `<button data-pool-act="disabled" data-email="${esc(r.email)}" data-source="${esc(r.source || $('#poolSource')?.value || 'all')}">停用</button>`
+          : ''}
+        ${r.status !== 'failed'
+          ? `<button data-pool-act="failed" data-email="${esc(r.email)}" data-source="${esc(r.source || $('#poolSource')?.value || 'all')}">标失败</button>`
+          : ''}
+        <button data-pool-act="delete" data-email="${esc(r.email)}" data-source="${esc(r.source || $('#poolSource')?.value || 'all')}" style="border-color:#e7a3a0;color:#b3261e;">删除</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="8" class="muted">邮箱池为空</td></tr>';
+  updateOutlookSelectionUi(rows);
+  _renderPager('outlook', total);
+}
+function updateOutlookSelectionUi(pageRows = null) {
+  const hint = $('#outlookSelectedHint');
+  const bulkBtn = $('#btnDeleteSelectedOutlook');
+  const markAvailBtn = $('#btnMarkSelectedOutlookAvailable');
+  const disableBtn = $('#btnDisableSelectedOutlook');
+  const failBtn = $('#btnFailSelectedOutlook');
+  if (hint) hint.textContent = `已选 ${OUTLOOK_SELECTED.size}`;
+  if (bulkBtn) bulkBtn.disabled = OUTLOOK_SELECTED.size === 0;
+  if (markAvailBtn) markAvailBtn.disabled = OUTLOOK_SELECTED.size === 0;
+  if (disableBtn) disableBtn.disabled = OUTLOOK_SELECTED.size === 0;
+  if (failBtn) failBtn.disabled = OUTLOOK_SELECTED.size === 0;
+
+  const cbAll = $('#outlookSelectAll');
+  if (!cbAll) return;
+  if (!pageRows) {
+    pageRows = OUTLOOK;
+  }
+  const pageKeys = pageRows.map(r => poolKey(r)).filter(Boolean);
+  const checkedCount = pageKeys.filter(key => OUTLOOK_SELECTED.has(key)).length;
+  cbAll.checked = pageKeys.length > 0 && checkedCount === pageKeys.length;
+  cbAll.indeterminate = checkedCount > 0 && checkedCount < pageKeys.length;
+  cbAll.disabled = pageKeys.length === 0;
+}
+$('#qOutlook').addEventListener('input', debounce(() => { PAGERS.outlook.page = 1; loadOutlook(); }, 250));
+function syncLegacyImapImportSettings() {
+  const isImap = $('#importSource').value === 'imap';
+  const settings = $('#imapImportSettings');
+  if (settings) { settings.classList.toggle('hidden', !isImap); settings.style.display = isImap ? 'grid' : 'none'; }
+  $('#importText').placeholder = isImap
+    ? 'user@example.com----imapPassword\nuser2@example.com:imapPassword'
+    : ($('#importSource').value === 'generic_api' ? 'email----取码地址' : 'email----password----clientId----refreshToken');
+}
+$('#poolSource').addEventListener('change', () => {
+  PAGERS.outlook.page = 1;
+  OUTLOOK_SELECTED.clear();
+  if ($('#poolSource').value !== 'all' && $('#poolSource').value !== 'cloudflare_domain') {
+    $('#importSource').value = $('#poolSource').value;
+    syncLegacyImapImportSettings();
+  }
+  loadOutlook();
+});
+$('#importSource').addEventListener('change', () => {
+  syncLegacyImapImportSettings();
+  $('#poolSource').value = $('#importSource').value;
+  PAGERS.outlook.page = 1;
+  OUTLOOK_SELECTED.clear();
+  loadOutlook();
+});
+$('#copyAllEmails').addEventListener('click', () => copyText(OUTLOOK.map(r=>r.copy_line).filter(Boolean).join('\n')));
+$('#outlookSelectAll').addEventListener('change', (e) => {
+  const pageRows = OUTLOOK;
+  if (e.target.checked) pageRows.forEach(r => r.email && OUTLOOK_SELECTED.add(poolKey(r)));
+  else pageRows.forEach(r => OUTLOOK_SELECTED.delete(poolKey(r)));
+  renderOutlook();
+});
+$('#btnDeleteSelectedOutlook').addEventListener('click', deleteSelectedOutlook);
+$('#btnMarkSelectedOutlookAvailable').addEventListener('click', () => bulkMarkOutlookStatus('available'));
+$('#btnDisableSelectedOutlook').addEventListener('click', () => bulkMarkOutlookStatus('disabled'));
+$('#btnFailSelectedOutlook').addEventListener('click', () => bulkMarkOutlookStatus('failed'));
+$('#outlookBody').addEventListener('click', async (e) => {
+  const t = e.target.closest('[data-pool-act]');
+  if (!t) return;
+  const { poolAct, email } = t.dataset;
+  const source = t.dataset.source || $('#poolSource').value;
+  try {
+    if (poolAct === 'delete') {
+      if (!confirm(`确定从邮箱池删除 ${email}？此操作不可撤销。`)) return;
+      const r = await api('/api/outlook/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, source}) });
+      if (!r.deleted) {
+        showToast('删除失败：邮箱不存在或来源不匹配');
+        return;
+      }
+      OUTLOOK_SELECTED.delete(`${source}|${email}`);
+      showToast('已删除');
+    } else {
+      const noteMap = {failed:'手动标记失败', available:'手动恢复可用', disabled:'手动停用'};
+      await api('/api/outlook/status', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, status: poolAct, source, note: noteMap[poolAct] || '手动修改状态'}) });
+      showToast(poolAct === 'failed' ? '已标失败' : poolAct === 'disabled' ? '已停用' : '已恢复可用');
+    }
+    loadOutlook(); loadSummary();
+  } catch(err) { showToast('操作失败: ' + err.message); }
+});
+$('#outlookBody').addEventListener('change', (e) => {
+  const cb = e.target.closest('.outlook-row-check');
+  if (!cb) return;
+  const email = cb.dataset.email;
+  const source = cb.dataset.source || $('#poolSource').value;
+  const key = `${source}|${email}`;
+  if (cb.checked) OUTLOOK_SELECTED.add(key);
+  else OUTLOOK_SELECTED.delete(key);
+  updateOutlookSelectionUi();
+});
+
+async function bulkMarkOutlookStatus(status) {
+  const items = Array.from(OUTLOOK_SELECTED).map(key => {
+    const [source, ...rest] = key.split('|');
+    return {source, email: rest.join('|')};
+  });
+  if (items.length === 0) { showToast('请先选择邮箱'); return; }
+  const labelMap = {available:'未使用/可用', disabled:'停用', failed:'失败'};
+  const label = labelMap[status] || status;
+  if (!confirm(`确定把选中的 ${items.length} 个邮箱标记为${label}吗？`)) return;
+  const btn = status === 'disabled' ? $('#btnDisableSelectedOutlook') : status === 'failed' ? $('#btnFailSelectedOutlook') : $('#btnMarkSelectedOutlookAvailable');
+  if (btn) btn.disabled = true;
+  try {
+    const r = await api('/api/outlook/status-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({items, status, source: $('#poolSource').value, note: `批量标记${label}`}),
+    });
+    OUTLOOK_SELECTED.clear();
+    const skippedCount = (r.skipped || []).length;
+    showToast(skippedCount ? `已更新 ${r.updated_count || 0} 个，跳过 ${skippedCount} 个` : `已更新 ${r.updated_count || 0} 个`);
+    loadOutlook(); loadSummary();
+  } catch(err) {
+    showToast('批量标记失败: ' + err.message);
+    updateOutlookSelectionUi();
+  }
+}
+
+async function deleteSelectedOutlook() {
+  const items = Array.from(OUTLOOK_SELECTED).map(key => {
+    const [source, ...rest] = key.split('|');
+    return {source, email: rest.join('|')};
+  });
+  if (items.length === 0) { showToast('请先选择邮箱'); return; }
+  if (!confirm(`确定从邮箱池删除选中的 ${items.length} 个邮箱吗？\n\n此操作不可撤销。`)) return;
+  $('#btnDeleteSelectedOutlook').disabled = true;
+  try {
+    const r = await api('/api/outlook/delete-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({items, source: $('#poolSource').value}),
+    });
+    (r.deleted || []).forEach(item => OUTLOOK_SELECTED.delete(`${item.source}|${item.email}`));
+    const skippedCount = (r.skipped || []).length;
+    showToast(skippedCount ? `已删除 ${r.deleted_count || 0} 个，跳过 ${skippedCount} 个` : `已删除 ${r.deleted_count || 0} 个`);
+    loadOutlook(); loadSummary();
+  } catch(err) {
+    showToast('批量删除失败: ' + err.message);
+    updateOutlookSelectionUi();
+  }
+}
+$('#btnImport').addEventListener('click', async () => {
+  const text = $('#importText').value;
+  if (!text.trim()) { showToast('请粘贴邮箱素材'); return; }
+  $('#btnImport').disabled = true;
+  try {
+    const source = $('#importSource').value;
+    const as_registered = $('#importAsRegistered')?.checked ?? false;
+    const payload = {text, source, as_registered};
+    if (source === 'imap') {
+      payload.imap_server = ($('#imapServer')?.value || '').trim();
+      payload.imap_port = Number($('#imapPort')?.value || 993);
+      payload.imap_ssl = ($('#imapSsl')?.value || 'true') === 'true';
+      if (!payload.imap_server) { showToast('请填写 IMAP 服务器'); return; }
+    }
+    const r = await api('/api/outlook/import', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const mode = r.as_registered ? '已注册账号' : '邮箱池素材';
+    $('#importResult').innerHTML = `<div class="banner info">按 ${mode} 导入：解析 ${r.parsed} 行，新增 ${r.inserted}，跳过 ${r.skipped}${r.as_registered ? '；可到“账号”页选择后批量补跑 Codex' : ''}</div>`;
+    $('#importText').value = '';
+    $('#poolSource').value = source;
+    loadOutlook(); loadAccounts(); loadSummary();
+  } catch(e) { $('#importResult').innerHTML = `<div class="banner warn">${esc(e.message)}</div>`; }
+  finally { $('#btnImport').disabled = false; }
+});
+
+// ---------- Codex 授权 ----------
+let CODEX = [];
+let CODEX_TOTAL = 0;
+async function loadCodex() {
+  try {
+    const p = PAGERS.codex;
+    const q = $('#qCodex') ? $('#qCodex').value.trim() : '';
+    const r = await api(`/api/codex?paged=1&page=${encodeURIComponent(p.page)}&page_size=${encodeURIComponent(p.size)}&q=${encodeURIComponent(q)}`);
+    CODEX = r.accounts || [];
+    CODEX_TOTAL = Number(r.total || CODEX.length || 0);
+    const totalPages = Math.max(1, Math.ceil(CODEX_TOTAL / p.size));
+    if (p.page > totalPages) { p.page = totalPages; return loadCodex(); }
+    $('#codexStatTotal').textContent = r.summary?.total ?? 0;
+    $('#codexStatExported').textContent = r.summary?.exported ?? 0;
+    $('#codexStatPending').textContent = r.summary?.pending ?? 0;
+    renderCodex();
+  } catch(e) { showToast('加载 Codex 列表失败: ' + e.message); }
+}
+const CODEX_SELECTED = new Set();
+function _codexUpdateSelectedHint() {
+  $('#codexSelectedHint').textContent = `已选 ${CODEX_SELECTED.size}`;
+  $('#btnCodexDownloadBulk').disabled = CODEX_SELECTED.size === 0;
+  const cpaBulkBtn = $('#btnCodexDownloadBulkCpa');
+  if (cpaBulkBtn) cpaBulkBtn.disabled = CODEX_SELECTED.size === 0;
+  const delBtn = $('#btnCodexDeleteBulk');
+  if (delBtn) delBtn.disabled = CODEX_SELECTED.size === 0;
+}
+function renderCodex() {
+  const total = CODEX_TOTAL;
+  const rows = CODEX;
+  $('#codexBody').innerHTML = rows.map(r => {
+    const exported = (r.exported_count || 0) > 0;
+    const statusBadge = exported
+      ? `<span class="pill status-used" title="导出 ${esc(r.exported_count)} 次，最近 ${esc(r.exported_at || '-')}">已导出</span>`
+      : `<span class="pill status-available">未导出</span>`;
+    const checked = CODEX_SELECTED.has(r.filename) ? 'checked' : '';
+    return `
+    <tr>
+      <td><input type="checkbox" class="codex-row-check" data-fname="${esc(r.filename)}" ${checked}></td>
+      <td><div class="main-cell">${esc(r.email || '-')}</div><div class="sub-cell mono">${esc(r.filename)}</div></td>
+      <td>${esc(r.plan || '-')}</td>
+      <td>${statusBadge}</td>
+      <td><span class="mono">${esc(r.account_id || '-')}</span></td>
+      <td class="muted">${esc(r.mtime || '-')}</td>
+      <td class="muted">${esc(r.expired || '-')}</td>
+      <td class="actions">
+        <button class="primary" data-codex-download="${esc(r.filename)}" title="从 SQLite 下载 JSON/回执">下载凭证</button>
+        <button class="good" data-codex-download-cpa="${esc(r.filename)}" title="按邮箱从 CPA auth-files 下载真实 Codex JSON">从CPA下载</button>
+        ${exported ? `<button data-codex-reset="${esc(r.filename)}" title="重新标记为未导出">重置标记</button>` : ''}
+        <button class="danger" data-codex-delete="${esc(r.filename)}" title="删除本地 Codex JSON 凭证文件">删除</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="muted">还没有 Codex 凭证。注册成功并跑通 Codex 授权后会自动出现。</td></tr>';
+  // 全选 checkbox：仅反映当前页状态
+  const pageFilenames = rows.map(r => r.filename);
+  const allChecked = pageFilenames.length > 0 && pageFilenames.every(f => CODEX_SELECTED.has(f));
+  $('#codexSelectAll').checked = allChecked;
+  $('#codexSelectAll').indeterminate = !allChecked && pageFilenames.some(f => CODEX_SELECTED.has(f));
+  _codexUpdateSelectedHint();
+  _renderPager('codex', total);
+}
+$('#qCodex').addEventListener('input', debounce(() => { PAGERS.codex.page = 1; loadCodex(); }, 250));
+$('#btnRefreshCodex').addEventListener('click', loadCodex);
+
+// 全选 / 取消全选（仅当前页可见行）
+$('#codexSelectAll').addEventListener('change', (e) => {
+  const pageRows = CODEX;
+  if (e.target.checked) pageRows.forEach(r => CODEX_SELECTED.add(r.filename));
+  else pageRows.forEach(r => CODEX_SELECTED.delete(r.filename));
+  renderCodex();
+});
+
+// 行 checkbox 变化（事件委托）
+$('#codexBody').addEventListener('change', (e) => {
+  const cb = e.target.closest('.codex-row-check');
+  if (!cb) return;
+  if (cb.checked) CODEX_SELECTED.add(cb.dataset.fname);
+  else CODEX_SELECTED.delete(cb.dataset.fname);
+  _codexUpdateSelectedHint();
+  const pageFilenames = CODEX.map(r => r.filename);
+  const allChecked = pageFilenames.length > 0 && pageFilenames.every(f => CODEX_SELECTED.has(f));
+  $('#codexSelectAll').checked = allChecked;
+  $('#codexSelectAll').indeterminate = !allChecked && pageFilenames.some(f => CODEX_SELECTED.has(f));
+});
+
+// 批量下载
+$('#btnCodexDownloadBulk').addEventListener('click', async () => {
+  if (CODEX_SELECTED.size === 0) return;
+  const filenames = Array.from(CODEX_SELECTED);
+  const note = `选中 ${filenames.length} 个凭证，打包到一个 JSON 文件下载。\n\n` +
+               `⚠ 这个聚合格式 CPA 不能直接读，主要用于备份/迁移。\n` +
+               `要给 CPA 用请用每行的"下载 JSON"单个下载。\n\n继续？`;
+  if (!confirm(note)) return;
+  $('#btnCodexDownloadBulk').disabled = true;
+  try {
+    const resp = await fetch('/api/codex/download-bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filenames }),
+    });
+    if (!resp.ok) {
+      const e = await resp.json().catch(() => ({}));
+      throw new Error(e.error || ('HTTP ' + resp.status));
+    }
+    const cd = resp.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename="([^"]+)"/);
+    const dlname = m ? m[1] : `codex-bulk-${Date.now()}.json`;
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = dlname;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 800);
+    showToast(`已打包下载 ${filenames.length} 个`);
+    CODEX_SELECTED.clear();
+    setTimeout(loadCodex, 600);
+  } catch(err) {
+    showToast('批量下载失败: ' + err.message);
+  } finally {
+    _codexUpdateSelectedHint();
+  }
+});
+
+
+$('#btnCodexDownloadBulkCpa').addEventListener('click', async () => {
+  if (CODEX_SELECTED.size === 0) return;
+  const filenames = Array.from(CODEX_SELECTED);
+  const note = `选中 ${filenames.length} 个本地记录，将按邮箱到 CPA auth-files 查找并下载真实 Codex JSON。\n\n` +
+               `下载结果会打包成 ZIP，解压后每个 JSON 可直接放入 CPA auth-dir。\n` +
+               `如 CPA 中找不到对应邮箱，会在 zip 的 manifest.json 记录错误。\n\n继续？`;
+  if (!confirm(note)) return;
+  const btn = $('#btnCodexDownloadBulkCpa');
+  btn.disabled = true;
+  try {
+    const resp = await fetch('/api/codex/download-bulk-from-cpa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filenames }),
+    });
+    if (!resp.ok) {
+      const e = await resp.json().catch(() => ({}));
+      const detail = Array.isArray(e.errors) && e.errors.length ? ('；' + e.errors.slice(0, 3).map(x => `${x.filename}: ${x.error}`).join('；')) : '';
+      throw new Error((e.error || ('HTTP ' + resp.status)) + detail);
+    }
+    const cd = resp.headers.get('Content-Disposition') || '';
+    const m = cd.match(/filename="([^"]+)"/);
+    const dlname = m ? m[1] : `codex-cpa-bulk-${Date.now()}.zip`;
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = dlname;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 800);
+    showToast(`已从 CPA 打包下载 ${filenames.length} 个（详情见 manifest.json）`);
+    CODEX_SELECTED.clear();
+    setTimeout(loadCodex, 600);
+  } catch(err) {
+    showToast('从 CPA 批量下载失败: ' + err.message);
+  } finally {
+    _codexUpdateSelectedHint();
+  }
+});
+
+$('#btnCodexDeleteBulk').addEventListener('click', async () => {
+  if (CODEX_SELECTED.size === 0) return;
+  const filenames = Array.from(CODEX_SELECTED);
+  if (!confirm(`确定删除选中的 ${filenames.length} 个 Codex 凭证吗？\n\n会删除 SQLite 中的凭证记录。此操作不可撤销。`)) return;
+  $('#btnCodexDeleteBulk').disabled = true;
+  try {
+    const r = await api('/api/codex/delete-bulk', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({filenames}),
+    });
+    (r.deleted || []).forEach(fname => CODEX_SELECTED.delete(fname));
+    const skipped = (r.skipped || []).length;
+    showToast(skipped ? `已删除 ${r.deleted_count || 0} 个，跳过 ${skipped} 个` : `已删除 ${r.deleted_count || 0} 个`);
+    loadCodex();
+  } catch(err) {
+    showToast('批量删除失败: ' + err.message);
+    _codexUpdateSelectedHint();
+  }
+});
+
+$('#codexBody').addEventListener('click', async (e) => {
+  const dlCpa = e.target.closest('[data-codex-download-cpa]');
+  if (dlCpa) {
+    const fname = dlCpa.dataset.codexDownloadCpa;
+    dlCpa.disabled = true;
+    try {
+      const resp = await fetch(`/api/codex/download-from-cpa/${encodeURIComponent(fname)}`);
+      if (!resp.ok) {
+        const e = await resp.json().catch(() => ({}));
+        throw new Error(e.error || ('HTTP ' + resp.status));
+      }
+      const cd = resp.headers.get('Content-Disposition') || '';
+      const m = cd.match(/filename="([^"]+)"/);
+      const dlname = m ? m[1] : fname.replace(/-cpa-callback\.json$/i, '-free.json');
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = dlname;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 800);
+      showToast('已从 CPA 下载');
+      setTimeout(loadCodex, 600);
+    } catch(err) {
+      showToast('从 CPA 下载失败: ' + err.message);
+      dlCpa.disabled = false;
+    }
+    return;
+  }
+  const dl = e.target.closest('[data-codex-download]');
+  if (dl) {
+    const fname = dl.dataset.codexDownload;
+    window.location.href = `/api/codex/download/${encodeURIComponent(fname)}`;
+    setTimeout(loadCodex, 800);
+    return;
+  }
+  const del = e.target.closest('[data-codex-delete]');
+  if (del) {
+    const fname = del.dataset.codexDelete;
+    if (!confirm(`确定删除 Codex 凭证？\n\n${fname}\n\n会删除本地 JSON 文件，并清理导出标记。此操作不可撤销。`)) return;
+    del.disabled = true;
+    try {
+      await api('/api/codex/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({filename: fname}) });
+      CODEX_SELECTED.delete(fname);
+      showToast('Codex 凭证已删除');
+      loadCodex();
+    } catch(err) {
+      showToast('删除失败: ' + err.message);
+      del.disabled = false;
+    }
+    return;
+  }
+  const rs = e.target.closest('[data-codex-reset]');
+  if (rs) {
+    const fname = rs.dataset.codexReset;
+    if (!confirm(`把 ${fname} 标记重置为未导出？`)) return;
+    try {
+      await api('/api/codex/reset-export', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({filename: fname}) });
+      showToast('已重置');
+      loadCodex();
+    } catch(err) { showToast('重置失败: ' + err.message); }
+  }
+});
+
+// ---------- 配置 ----------
+let CONFIG_ACTIVE_GROUP = '';
+let CONFIG_EMAIL_ACTIVE_SECTION = '通用邮箱 / OTP';
+let CONFIG_SMS_ACTIVE_SECTION = '通用接码';
+let CONFIG_CODEX_ACTIVE_SECTION = '基础配置';
+const CONFIG_PENDING_UPDATES = {};
+
+function configGroups() {
+  const groups = {};
+  CONFIG.forEach(f => { (groups[f.group || '其他'] = groups[f.group || '其他'] || []).push(f); });
+  return groups;
+}
+
+function renderConfigField(f) {
+  const fv = Object.prototype.hasOwnProperty.call(CONFIG_PENDING_UPDATES, f.key) ? CONFIG_PENDING_UPDATES[f.key] : f.value;
+  let html = `<label class="fld">${esc(f.label)}<span class="hint">${esc(f.help)} · <span class="mono">${esc(f.key)}</span></span>`;
+  if (f.type === 'bool') {
+    html += `<select data-key="${attrEsc(f.key)}"><option value="true"${fv?' selected':''}>开启 (True)</option><option value="false"${!fv?' selected':''}>关闭 (False)</option></select>`;
+  } else if (f.type === 'int') {
+    html += `<input type="number" data-key="${attrEsc(f.key)}" value="${attrEsc(fv == null ? '' : fv)}">`;
+  } else if (f.type === 'float') {
+    html += `<input type="number" step="0.1" data-key="${attrEsc(f.key)}" value="${attrEsc(fv == null ? '' : fv)}">`;
+  } else if (f.type === 'list_str_multiline') {
+    html += `<textarea data-key="${attrEsc(f.key)}" placeholder="每行一条，可留空">${attrEsc((fv||[]).join('\n'))}</textarea>`;
+  } else {
+    // 空字符串/占位符 '-' 都显示为空输入框，避免误保存成真实值
+    const shown = isPlaceholderEmpty(fv) ? '' : fv;
+    const inputType = f.secret ? 'password' : 'text';
+    const ph = f.secret ? '保存在 .env，可留空' : '可留空';
+    html += `<input type="${inputType}" data-key="${attrEsc(f.key)}" value="${attrEsc(shown)}" placeholder="${ph}" autocomplete="off" spellcheck="false">`;
+  }
+  const field = html + `</label>`;
+  const decorated = f.external_url
+    ? `<div class="config-field-wrap">${field}${renderConfigExternalLink(f)}</div>`
+    : field;
+  return decorated + renderConfigRecommendedLinks(f);
+}
+
+function renderConfigExternalLink(f) {
+  const url = String(f.external_url || '').trim();
+  if (!/^https?:\/\//i.test(url)) return '';
+  const label = String(f.external_label || '打开官网');
+  return `<a class="config-external-link" href="${attrEsc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`;
+}
+function renderConfigRecommendedLinks(f) {
+  const links = Array.isArray(f.recommended_links) ? f.recommended_links : [];
+  const items = links.map(item => {
+    const url = String(item?.url || '').trim();
+    if (!/^https?:\/\//i.test(url)) return '';
+    const label = String(item?.label || url);
+    const description = String(item?.description || '').trim();
+    return `<span class="config-recommendations-item"><a href="${attrEsc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>${description ? `：${esc(description)}` : ''}</span>`;
+  }).filter(Boolean).join('');
+  if (!items) return '';
+  return `<div class="config-recommendations" role="note"><span class="config-recommendations-title">推荐家宽</span>${items}</div>`;
+}
+
+function configSubhead(title, help = '') {
+  const subheadClass = title === 'Remail' ? 'config-subhead remail-subhead' : 'config-subhead';
+  const titleHtml = title === 'Remail' ? `<div class="remail-subhead-title">${esc(title)}</div>` : esc(title);
+  const promo = title === 'Remail'
+    ? `<span class="remail-promo-notice" role="note">通过作者卡网购买积分9折优惠</span>`
+    : '';
+  return `<div class="${subheadClass}">${titleHtml}${help ? `<span class="hint">${esc(help)}</span>` : ''}${promo}</div>`;
+}
+
+function emailConfigSectionForKey(key) {
+  if (['USE_EMAIL_SERVICE','REGISTER_EMAIL','REGISTER_NAME','OTP_MAX_WAIT','OTP_POLL_INTERVAL','EMAIL_SOURCE'].includes(key)) {
+    return ['通用邮箱 / OTP', '邮箱来源选择、OTP 等待参数、手动邮箱等通用设置'];
+  }
+  if (key.startsWith('GPTMAIL_')) return ['GPTMail', 'GPTMail 临时邮箱 API 配置'];
+  if (key.startsWith('MAIL_NEST_')) return ['MailNest', 'MailNest / 迈巢临时邮箱 API 配置'];
+  if (key.startsWith('CLOUDMAIL_')) return ['CloudMail', 'CloudMail 域名随机邮箱、Token 和收信 API 配置'];
+  if (key.startsWith('REMAIL_')) return ['Remail', 'Remail 开放 API、项目下单和取件配置'];
+  if (key.startsWith('OUTLOOK_')) return ['Outlook 邮箱池', 'Outlook 邮箱池和取件模式配置'];
+  if (key.startsWith('IMAP_')) return ['通用 IMAP', '通用 IMAP 邮箱池的收件目录配置'];
+  if (['EMAIL_DOMAIN','QQ_EMAIL','QQ_IMAP_PASSWORD'].includes(key)) return ['Cloudflare 域名邮箱', 'Cloudflare 转发到 QQ 邮箱后的 IMAP 收信配置'];
+  return ['其他邮箱配置', ''];
+}
+
+
+function smsConfigSectionForKey(key) {
+  if (['SMS_PROVIDER','SMS_COUNTRY','SMS_SERVICE','SMS_MAX_RETRIES','SMS_CODE_WAIT'].includes(key)) {
+    return ['通用接码', '接码通道选择、国家/服务代码、等待和重试参数；H 通道可复用 SMS_SERVICE/SMS_COUNTRY 作为 projectId/country'];
+  }
+  if (key === 'SMS_API_KEY') return ['GrizzlySMS', 'GrizzlySMS 平台 API Key 配置'];
+  if (key.startsWith('H_')) return ['H 接码', 'H_API.md 本地 H 取号服务配置；项目ID/国家留空时复用通用字段'];
+  if (key.startsWith('L_')) return ['L 接码', 'L_API.md 本地 L 取号服务配置'];
+  return ['其他接码配置', ''];
+}
+
+function codexConfigSectionForKey(key) {
+  if (['CODEX_OAUTH_DRIVER','CODEX_AUTH_URL_SOURCE'].includes(key)) {
+    return ['基础配置', 'Codex 授权驱动和授权地址来源配置'];
+  }
+  if (key.startsWith('CPA_')) {
+    return ['CPA配置', 'CPA 授权链接生成、回调上传和管理接口配置'];
+  }
+  if (['SUB2API_API_BASE','SUB2API_API_KEY','SUB2API_API_TIMEOUT'].includes(key)) {
+    return ['sub2api通用', 'sub2api 共用 API 基址、鉴权和超时配置；Agent Token 和 OAuth 都复用这里'];
+  }
+  if (['SUB2API_AUTO_EXPORT','SUB2API_SYNC_MODE','SUB2API_OUTPUT_PATH','SUB2API_PROXY_KEY'].includes(key)) {
+    return ['sub2api Agent Token', 'Codex Agent Token 生成后的 sub2api 同步、上传路径、本地文件和代理键配置'];
+  }
+  return ['基础配置', ''];
+}
+
+function renderSectionedConfigFields(fields, activeSectionName, setActiveSection, sectionForKey, preferred, dataAttr) {
+  const bySection = {};
+  for (const f of fields) {
+    const [section, help] = sectionForKey(f.key || '');
+    if (!bySection[section]) bySection[section] = {help, fields: []};
+    bySection[section].fields.push(f);
+  }
+  const sections = preferred.filter(x => bySection[x]).concat(Object.keys(bySection).filter(x => !preferred.includes(x)));
+  if (!sections.includes(activeSectionName)) {
+    activeSectionName = sections[0] || '';
+    setActiveSection(activeSectionName);
+  }
+  let html = `
+    <div class="config-subtabs">
+      ${sections.map(section => `
+        <button type="button" data-${dataAttr}="${esc(section)}" class="${section === activeSectionName ? 'active' : ''}">
+          ${esc(section)} <span class="config-count">${bySection[section].fields.length}</span>
+        </button>
+      `).join('')}
+    </div>
+  `;
+  const current = bySection[activeSectionName];
+  if (!current) return html;
+  html += configSubhead(activeSectionName, current.help);
+  for (const f of current.fields) {
+    html += renderConfigField(f);
+    if (f.key === 'CLOUDMAIL_AUTH_TOKEN') html += renderCloudMailTokenTools();
+  }
+  return html;
+}
+
+function renderConfigFields(fields) {
+  if (CONFIG_ACTIVE_GROUP === '邮箱 / OTP') {
+    return renderSectionedConfigFields(
+      fields,
+      CONFIG_EMAIL_ACTIVE_SECTION,
+      v => { CONFIG_EMAIL_ACTIVE_SECTION = v; },
+      emailConfigSectionForKey,
+      ['通用邮箱 / OTP', 'GPTMail', 'MailNest', 'CloudMail', 'Remail', 'Outlook 邮箱池', 'Cloudflare 域名邮箱', '其他邮箱配置'],
+      'email-config-section'
+    );
+  }
+  if (CONFIG_ACTIVE_GROUP === '接码平台') {
+    return renderSectionedConfigFields(
+      fields,
+      CONFIG_SMS_ACTIVE_SECTION,
+      v => { CONFIG_SMS_ACTIVE_SECTION = v; },
+      smsConfigSectionForKey,
+      ['通用接码', 'GrizzlySMS', 'H 接码', 'L 接码', '其他接码配置'],
+      'sms-config-section'
+    );
+  }
+  if (CONFIG_ACTIVE_GROUP === 'Codex') {
+    return renderSectionedConfigFields(
+      fields,
+      CONFIG_CODEX_ACTIVE_SECTION,
+      v => { CONFIG_CODEX_ACTIVE_SECTION = v; },
+      codexConfigSectionForKey,
+      ['基础配置', 'CPA配置', 'sub2api通用', 'sub2api Agent Token'],
+      'codex-config-section'
+    );
+  }
+  return fields.map(renderConfigField).join('');
+}
+
+function renderConfigTabs() {
+  const groups = configGroups();
+  const names = Object.keys(groups);
+  if (!CONFIG_ACTIVE_GROUP || !groups[CONFIG_ACTIVE_GROUP]) CONFIG_ACTIVE_GROUP = names[0] || '';
+  $('#configTabs').innerHTML = names.map(name => `
+    <button type="button" data-config-group="${esc(name)}" class="${name === CONFIG_ACTIVE_GROUP ? 'active' : ''}">
+      ${esc(name)} <span class="config-count">${groups[name].length}</span>
+    </button>
+  `).join('');
+}
+
+function renderRoxyWorkspaceTools() {
+  if (CONFIG_ACTIVE_GROUP !== 'RoxyBrowser') return '';
+  const current = (CONFIG.find(f => f.key === 'ROXY_WORKSPACE_ID') || {}).value || '';
+  return `
+    <div class="roxy-workspace-box">
+      <div>
+        <b>团队 / 项目选择</b>
+        <div class="hint">点击“获取团队”调用 Roxy <span class="mono">/browser/workspace</span>，选择后保存 <span class="mono">ROXY_WORKSPACE_ID</span> 和 <span class="mono">ROXY_PROJECT_ID</span>。</div>
+        <a class="roxy-invite-link" href="https://roxybrowser.cn/invite/NvH4Jx" target="_blank" rel="noopener noreferrer">打开 RoxyBrowser 官网（免费 5 个窗口）</a>
+      </div>
+      <div class="row">
+        <div>
+          <label class="fld">团队 / 项目
+            <select id="roxyWorkspaceSelect"><option value="">当前团队：${esc(current || '未设置')}</option></select>
+          </label>
+        </div>
+        <div class="action-cell">
+          <button class="btn" type="button" id="btnLoadRoxyWorkspaces">获取团队</button>
+          <button class="btn primary" type="button" id="btnSaveRoxyWorkspace" disabled>保存选择</button>
+        </div>
+      </div>
+      <div id="roxyWorkspaceStatus" class="muted" style="font-size:12px;">未加载</div>
+    </div>
+  `;
+}
+
+function renderCloudMailTokenTools() {
+  if (CONFIG_ACTIVE_GROUP !== '邮箱 / OTP') return '';
+  const hasCloudMail = CONFIG.some(f => String(f.key || '').startsWith('CLOUDMAIL_'));
+  if (!hasCloudMail) return '';
+  return `
+    <div class="roxy-workspace-box">
+      <div>
+        <b>CloudMail Token</b>
+        <div class="hint">确认本区的 <span class="mono">CLOUDMAIL_API_BASE</span>、管理员邮箱、密码已填写后，点击按钮调用 <span class="mono">/api/public/genToken</span> 生成 Token。保存配置本身不会自动生成 Token。</div>
+      </div>
+      <div class="action-cell">
+        <button class="btn primary" type="button" id="btnGenCloudMailToken">生成 CloudMail Token</button>
+        <button class="btn" type="button" id="btnLoadCloudMailDomains">获取 CloudMail 域名</button>
+      </div>
+      <div id="cloudMailTokenStatus" class="muted" style="font-size:12px;">未生成</div>
+    </div>
+  `;
+}
+
+function _configValue(key) {
+  const el = $(`#tab-config [data-key="${CSS.escape(key)}"]`);
+  if (el) return el.value;
+  const f = CONFIG.find(x => x.key === key);
+  return f ? (f.value || '') : '';
+}
+
+async function genCloudMailToken() {
+  const btn = $('#btnGenCloudMailToken');
+  const status = $('#cloudMailTokenStatus');
+  if (!btn || !status) return;
+  btn.disabled = true;
+  status.textContent = '正在调用 CloudMail /api/public/genToken...';
+  try {
+    const r = await api('/api/cloudmail/gen-token', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        api_base: _configValue('CLOUDMAIL_API_BASE').trim(),
+        admin_email: _configValue('CLOUDMAIL_ADMIN_EMAIL').trim(),
+        password: _configValue('CLOUDMAIL_PASSWORD').trim(),
+        path: _configValue('CLOUDMAIL_TOKEN_PATH').trim() || '/api/public/genToken',
+      }),
+    });
+    status.innerHTML = `✅ ${esc(r.message || 'Token 已生成并保存')}`;
+    showToast('CloudMail Token 已生成');
+    await loadConfig();
+  } catch(e) {
+    status.innerHTML = `<span style="color:var(--red);">生成失败：${esc(e.message)}</span>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadCloudMailDomains() {
+  const btn = $('#btnLoadCloudMailDomains');
+  const status = $('#cloudMailTokenStatus');
+  if (!btn || !status) return;
+  btn.disabled = true;
+  status.textContent = '正在从 CloudMail 平台获取可用域名...';
+  try {
+    const r = await api('/api/cloudmail/domains', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        api_base: _configValue('CLOUDMAIL_API_BASE').trim(),
+        admin_email: _configValue('CLOUDMAIL_ADMIN_EMAIL').trim(),
+        password: _configValue('CLOUDMAIL_PASSWORD').trim(),
+        token: _configValue('CLOUDMAIL_AUTH_TOKEN').trim(),
+      }),
+    });
+    const domains = Array.isArray(r.domains) ? r.domains : [];
+    status.innerHTML = `✅ ${esc(r.message || '域名已获取')}：<span class="mono">${esc(domains.join(', '))}</span>`;
+    showToast(`CloudMail 已获取 ${domains.length} 个域名`);
+    await loadConfig();
+  } catch(e) {
+    status.innerHTML = `<span style="color:var(--red);">获取域名失败：${esc(e.message)}</span>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function bindRoxyWorkspaceTools() {
+  const cloudBtn = $('#btnGenCloudMailToken');
+  if (cloudBtn) cloudBtn.addEventListener('click', genCloudMailToken);
+  const cloudDomainBtn = $('#btnLoadCloudMailDomains');
+  if (cloudDomainBtn) cloudDomainBtn.addEventListener('click', loadCloudMailDomains);
+
+  const loadBtn = $('#btnLoadRoxyWorkspaces');
+  const saveBtn = $('#btnSaveRoxyWorkspace');
+  const sel = $('#roxyWorkspaceSelect');
+  if (!loadBtn || !saveBtn || !sel) return;
+  sel.addEventListener('change', () => { saveBtn.disabled = !sel.value; });
+  loadBtn.addEventListener('click', loadRoxyWorkspaces);
+  saveBtn.addEventListener('click', saveRoxyWorkspaceSelection);
+}
+
+function renderConfigPanel() {
+  const groups = configGroups();
+  const fields = groups[CONFIG_ACTIVE_GROUP] || [];
+  if (!fields.length) {
+    $('#configForm').innerHTML = '<div class="banner warn">暂无配置项</div>';
+    return;
+  }
+  $('#configForm').innerHTML = `
+    <div class="config-panel">
+      <h3>${esc(CONFIG_ACTIVE_GROUP)}</h3>
+      ${renderRoxyWorkspaceTools()}
+      ${renderConfigFields(fields)}
+    </div>
+  `;
+  bindRoxyWorkspaceTools();
+}
+
+async function loadConfig() {
+  try {
+    CONFIG = await api('/api/config');
+    renderConfigTabs();
+    renderConfigPanel();
+  } catch(e) {
+    $('#configTabs').innerHTML = '';
+    $('#configForm').innerHTML = `<div class="banner warn">${esc(e.message)}</div>`;
+  }
+}
+
+$('#configTabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-config-group]');
+  if (!btn) return;
+  CONFIG_ACTIVE_GROUP = btn.dataset.configGroup;
+  renderConfigTabs();
+  renderConfigPanel();
+});
+
+$('#configForm').addEventListener('click', (e) => {
+  const emailBtn = e.target.closest('[data-email-config-section]');
+  if (emailBtn) {
+    CONFIG_EMAIL_ACTIVE_SECTION = emailBtn.dataset.emailConfigSection;
+    renderConfigPanel();
+    return;
+  }
+  const smsBtn = e.target.closest('[data-sms-config-section]');
+  if (smsBtn) {
+    CONFIG_SMS_ACTIVE_SECTION = smsBtn.dataset.smsConfigSection;
+    renderConfigPanel();
+    return;
+  }
+  const codexBtn = e.target.closest('[data-codex-config-section]');
+  if (codexBtn) {
+    CONFIG_CODEX_ACTIVE_SECTION = codexBtn.dataset.codexConfigSection;
+    renderConfigPanel();
+    return;
+  }
+});
+
+async function loadRoxyWorkspaces() {
+  const status = $('#roxyWorkspaceStatus');
+  const sel = $('#roxyWorkspaceSelect');
+  const saveBtn = $('#btnSaveRoxyWorkspace');
+  const loadBtn = $('#btnLoadRoxyWorkspaces');
+  if (!status || !sel) return;
+  loadBtn.disabled = true;
+  saveBtn.disabled = true;
+  status.textContent = '正在调用 Roxy API 获取团队/工作区...';
+  try {
+    const r = await api('/api/roxy/workspaces');
+    const items = r.items || [];
+    if (!items.length) {
+      const errs = (r.errors || []).slice(0, 5).map(x => `${x.method || ''} ${x.path || ''}: ${x.error || ''}`).join('；');
+      throw new Error(errs ? `未返回团队/工作区列表。探测结果：${errs}` : '未返回团队/工作区列表');
+    }
+    const current = (CONFIG.find(f => f.key === 'ROXY_WORKSPACE_ID') || {}).value || '';
+    const currentProject = (CONFIG.find(f => f.key === 'ROXY_PROJECT_ID') || {}).value || '';
+    sel.innerHTML = `<option value="">请选择团队/项目（当前团队：${esc(current || '未设置')}，项目：${esc(currentProject || '未设置')}）</option>` +
+      items.map(x => {
+        const value = `${x.id}::${x.projectId || ''}`;
+        const selected = String(x.id)===String(current) && String(x.projectId || '')===String(currentProject);
+        return `<option value="${esc(value)}" data-workspace-id="${esc(x.id)}" data-project-id="${esc(x.projectId || '')}"${selected?' selected':''}>${esc(x.label || (x.name + ' (' + x.id + ')'))}</option>`;
+      }).join('');
+    saveBtn.disabled = !sel.value;
+    status.innerHTML = `已获取 ${items.length} 个团队/项目，接口：<span class="mono">${esc(r.method || '')} ${esc(r.path || '')}</span>`;
+  } catch(e) {
+    status.innerHTML = `<span style="color:var(--red);">获取失败：${esc(e.message)}</span>`;
+  } finally {
+    loadBtn.disabled = false;
+  }
+}
+
+async function saveRoxyWorkspaceSelection() {
+  const sel = $('#roxyWorkspaceSelect');
+  const status = $('#roxyWorkspaceStatus');
+  const opt = sel ? sel.selectedOptions[0] : null;
+  const workspaceId = opt ? (opt.dataset.workspaceId || '') : '';
+  const projectId = opt ? (opt.dataset.projectId || '') : '';
+  if (!workspaceId) return;
+  try {
+    const r = await api('/api/config', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({updates: {ROXY_WORKSPACE_ID: workspaceId, ROXY_PROJECT_ID: projectId}}),
+    });
+    const fw = CONFIG.find(x => x.key === 'ROXY_WORKSPACE_ID');
+    const fp = CONFIG.find(x => x.key === 'ROXY_PROJECT_ID');
+    if (fw) fw.value = workspaceId;
+    if (fp) fp.value = projectId;
+    status.innerHTML = `✅ 已保存团队 ID：<span class="mono">${esc(workspaceId)}</span>，项目 ID：<span class="mono">${esc(projectId || '未设置')}</span>`;
+    showToast(r.reloaded ? 'Roxy 团队/项目已保存并生效' : 'Roxy 团队/项目已保存');
+    renderConfigPanel();
+  } catch(e) {
+    status.innerHTML = `<span style="color:var(--red);">保存失败：${esc(e.message)}</span>`;
+  }
+}
+function readConfigElementValue(el, f) {
+  if (!f) return undefined;
+  if (f.type === 'list_str_multiline') return el.value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if (f.type === 'bool') return el.value === 'true';
+  if (f.type === 'int') return parseInt(el.value || '0', 10);
+  if (f.type === 'float') return parseFloat(el.value || '0');
+  return isPlaceholderEmpty(el.value) ? '' : el.value.trim();
+}
+
+$('#configForm').addEventListener('input', (e) => {
+  const el = e.target.closest('[data-key]');
+  if (!el) return;
+  const f = CONFIG.find(x => x.key === el.dataset.key);
+  if (!f) return;
+  CONFIG_PENDING_UPDATES[f.key] = readConfigElementValue(el, f);
+});
+$('#configForm').addEventListener('change', (e) => {
+  const el = e.target.closest('[data-key]');
+  if (!el) return;
+  const f = CONFIG.find(x => x.key === el.dataset.key);
+  if (!f) return;
+  CONFIG_PENDING_UPDATES[f.key] = readConfigElementValue(el, f);
+});
+
+$('#btnSaveConfig').addEventListener('click', async () => {
+  const updates = {...CONFIG_PENDING_UPDATES};
+  $$('#tab-config [data-key]').forEach(el => {
+    const f = CONFIG.find(x => x.key === el.dataset.key);
+    if (!f) return;
+    updates[f.key] = readConfigElementValue(el, f);
+  });
+  $('#btnSaveConfig').disabled = true;
+  try {
+    const r = await api('/api/config', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({updates}) });
+    if (r.reloaded) {
+      $('#configBanner').className = 'banner info';
+      $('#configBanner').innerHTML = `✅ 已保存 ${r.updated.length} 项，并完成热加载，<b>立即生效</b>，无需重启。${r.note ? `<br>${esc(r.note)}` : ''}`;
+    } else {
+      $('#configBanner').className = 'banner warn';
+      $('#configBanner').innerHTML = `已保存 ${r.updated.length} 项，但<b>热加载失败</b>（${esc(r.note||'')}），请重启 Web 服务后生效。`;
+    }
+    for (const [k, v] of Object.entries(updates)) { const f = CONFIG.find(x => x.key === k); if (f) f.value = v; delete CONFIG_PENDING_UPDATES[k]; }
+    showToast(r.reloaded ? '配置已生效' : '配置已保存（需重启）');
+  } catch(e) { showToast('保存失败: ' + e.message); }
+  finally { $('#btnSaveConfig').disabled = false; }
+});
+
+// ---------- 全局复制委托 ----------
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-copy-id]');
+  if (!t) return;
+  copyText(copyStore.get(t.dataset.copyId));
+});
+
+// ---------- 初始化 ----------
+loadSummary();
+activateTab(localStorage.getItem('gpt_console_active_tab') || 'register', false);
+jobsTimer = setInterval(() => { if (!$('#tab-register').classList.contains('hidden')) refreshJobs(); }, 10000);
+setInterval(loadSummary, 30000);
+setInterval(() => { if (!$('#tab-accounts').classList.contains('hidden')) pollAccountPlanStatuses(); }, 10000);
+</script>
+</body>
+</html>

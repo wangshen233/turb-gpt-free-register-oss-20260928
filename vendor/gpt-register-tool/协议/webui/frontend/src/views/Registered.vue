@@ -1,0 +1,965 @@
+<script setup>
+import { computed, onActivated, onBeforeUnmount, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  listRegistered, getRegistered, deleteRegistered,
+  bulkDeleteRegistered, bulkDeleteAccounts, checkPlus,
+  listExportFormats, exportRegistered, updateCredentials, rebindEmail,
+  startBulkRebindEmail, getBulkRebindEmail,
+} from '@/api/register'
+import { copyText, fmtTime } from '@/api/request'
+import { useFormStore, proxyText } from '@/stores/form'
+import { useProxyStore } from '@/stores/proxy'
+import { useRuntimeStore } from '@/stores/runtime'
+import StatusDot from '@/components/StatusDot.vue'
+
+const { form } = storeToRefs(useFormStore())
+// 检测用的代理必须能从代理池里挑：以前这页只在代码里读 form.proxy，页面上
+// 连个输入框都没有，主人在代理池换了密码，这里还在用 localStorage 里的旧值，
+// 结果是 curl:(97) 代理鉴权被拒 → 静默降级直连 → 拿真实 IP 打 chatgpt.com。
+const { list: proxyList } = storeToRefs(useProxyStore())
+const runtime = useRuntimeStore()
+// dataVersion 要走 storeToRefs 才保持响应（watch 用）；bumpData 是 action，直接从
+// store 实例上取 —— storeToRefs 只转 state/getter，把 action 解构出来会丢 this。
+const { dataVersion } = storeToRefs(runtime)
+
+const PAGE_SIZE = 20
+const rows = ref([])
+const total = ref(0)
+const page = ref(1)
+const filter = ref('all')
+const selected = ref([])
+const loading = ref(false)
+const checking = ref(false)
+const checkResult = ref('')
+
+const PLUS_TYPE = {
+  plus_eligible: 'success', plus_active: 'primary', free: 'warning',
+  // token_invalid（401 且响应体没有封号措辞）仍与 banned 分开显示——判据不同，
+  // 不能混成一个。但配色从橙改红：AT 未到期却 401 = 被吊销，实测多半就是封号，
+  // 橙色（=号还在）会让主人以为重新登录就能救回来。
+  token_invalid: 'danger',
+  banned: 'danger', error: 'danger',
+}
+function plusOf(row) { return row.plus_check || null }
+
+async function load(resetPage) {
+  if (resetPage) page.value = 1
+  loading.value = true
+  try {
+    const { items, total: t } = await listRegistered({
+      limit: PAGE_SIZE, offset: (page.value - 1) * PAGE_SIZE, filter: filter.value,
+    })
+    rows.value = items
+    total.value = t
+  } catch (e) { ElMessage.error(e.message) }
+  finally { loading.value = false }
+}
+
+function collectEmails(mode) {
+  if (mode === 'selected') return selected.value.map((r) => r.email)
+  if (mode === 'unchecked') return rows.value.filter((r) => !plusOf(r)).map((r) => r.email)
+  return rows.value.map((r) => r.email) // all（当前页）
+}
+
+async function doCheck(mode) {
+  const emails = collectEmails(mode)
+  if (!emails.length) { ElMessage.info('当前页没有可检测的号'); return }
+  checking.value = true
+  checkResult.value = `检查中... (${emails.length} 个)`
+  try {
+    const { results, note } = await checkPlus(emails, proxyText(form.value))
+    let plus = 0, free = 0, banned = 0, failed = 0, badToken = 0
+    for (const [email, info] of Object.entries(results)) {
+      const row = rows.value.find((r) => r.email === email)
+      if (row) row.plus_check = info
+      if (info.status === 'plus_eligible' || info.status === 'plus_active') plus++
+      else if (info.status === 'banned') banned++
+      else if (info.status === 'free') free++
+      else if (info.status === 'token_invalid') badToken++
+      else if (info.status === 'error') failed++
+    }
+    // failed / note 不入库，只是这一次的现场说明：
+    // 以前网络/代理挂了这里只会显示「0 可用Plus, 0 Free, 0 封号」，看不出是没检测成。
+    // badToken 从 2026-08-10 起是**会入库**的结论，措辞也跟着改：
+    // AT 没过期却 401 = 被吊销，大概率就是封号，不该再说得像只是要重新登录。
+    const parts = [`完成: ${plus} 可用Plus, ${free} Free, ${banned} 封号`]
+    if (badToken) parts.push(`${badToken} 个凭证失效（AT 被吊销，多半已封）`)
+    if (failed) parts.push(`${failed} 个没检测成`)
+    if (note) parts.push(note)
+    checkResult.value = parts.join(' · ')
+  } catch (e) {
+    checkResult.value = ''
+    ElMessage.error('检查失败: ' + e.message)
+  } finally { checking.value = false }
+}
+
+// customClass 里的 pre-line 让消息里的 \n 真的换行。
+// 不用 dangerouslyUseHTMLString：消息里会拼邮箱、文件名这些数据，走 HTML 等于开 XSS 口子。
+async function confirm(msg) {
+  try {
+    await ElMessageBox.confirm(msg, '确认', {
+      type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消',
+      customClass: 'confirm-multiline',
+    })
+    return true
+  }
+  catch (_) { return false }
+}
+async function deleteOne(email) {
+  if (!(await confirm(`删除 ${email} 的凭证？`))) return
+  try { await deleteRegistered(email); ElMessage.success('已删除'); load() }
+  catch (e) { ElMessage.error(e.message) }
+}
+async function deleteSelected() {
+  const emails = selected.value.map((r) => r.email)
+  if (!emails.length) return
+  if (!(await confirm(`确定删除选中的 ${emails.length} 条凭证？(不可恢复)`))) return
+  try { const r = await bulkDeleteRegistered({ emails }); ElMessage.success(`已删除 ${r.deleted} 条`); load() }
+  catch (e) { ElMessage.error(e.message) }
+}
+async function deleteAll() {
+  if (!(await confirm('这会清空注册结果表里的所有凭证！邮箱列表不受影响，确定？'))) return
+  if (!(await confirm('再次确认：真的要删除全部凭证吗？此操作不可恢复！'))) return
+  try { const r = await bulkDeleteRegistered({ all: true }); ElMessage.success(`已清空 ${r.deleted} 条`); load() }
+  catch (e) { ElMessage.error(e.message) }
+}
+
+// ──────────── 手动换绑域名邮箱 ────────────
+const rebindVisible = ref(false)
+const rebindLoading = ref(false)
+const rebindSource = ref('')
+const rebindTarget = ref('')
+const rebindOtpTimeout = ref(180)
+
+function isICloudRow(row) {
+  return row.mail_kind === 'icloud_relay' || (row.email || '').toLowerCase().endsWith('@icloud.com')
+}
+
+const selectedICloudRows = computed(() => selected.value.filter(isICloudRow))
+
+function openRebind(row) {
+  rebindSource.value = row.email
+  rebindTarget.value = ''
+  rebindOtpTimeout.value = Math.max(60, Number(form.value.otpTimeout) || 180)
+  rebindVisible.value = true
+}
+
+async function submitRebind() {
+  const source = rebindSource.value
+  const target = String(rebindTarget.value || '').trim()
+  const targetText = target || '自动生成的已配置域名邮箱'
+  if (!(await confirm(
+    `确认将 ${source} 换绑到 ${targetText}？\n\n` +
+    '换绑期间会登录源账号并读取验证码，完成后本地记录会改成新邮箱。',
+  ))) return
+
+  rebindLoading.value = true
+  try {
+    const result = await rebindEmail({
+      source_email: source,
+      target_email: target,
+      proxy: proxyText(form.value),
+      otp_timeout: Math.max(60, Math.min(600, Number(rebindOtpTimeout.value) || 180)),
+    })
+    ElMessage.success(`换绑成功：${result.source_email} → ${result.target_email}`)
+    rebindVisible.value = false
+    rebindSource.value = ''
+    await load()
+    runtime.bumpData()
+  } catch (e) {
+    ElMessage.error('换绑失败: ' + e.message)
+  } finally {
+    rebindLoading.value = false
+  }
+}
+
+// ──────────── 批量协议换绑域名邮箱 ────────────
+const bulkRebindVisible = ref(false)
+const bulkRebindLoading = ref(false)
+const bulkRebindSources = ref([])
+const bulkRebindOtpTimeout = ref(180)
+const bulkRebindJob = ref(null)
+let bulkRebindTimer = null
+
+const bulkRebindPercent = computed(() => {
+  const job = bulkRebindJob.value
+  if (!job?.total) return 0
+  return Math.min(100, Math.round((job.completed / job.total) * 100))
+})
+const bulkRebindFinished = computed(() =>
+  ['done', 'failed'].includes(bulkRebindJob.value?.status),
+)
+const bulkRebindRunning = computed(() =>
+  Boolean(bulkRebindJob.value && !bulkRebindFinished.value),
+)
+
+function bulkResultLabel(status) {
+  return { queued: '排队中', changed: '已换绑', failed: '失败' }[status] || status || '未知'
+}
+
+function bulkResultType(status) {
+  return { queued: 'info', changed: 'success', failed: 'danger' }[status] || 'info'
+}
+
+const BULK_PHASE_LABELS = {
+  item: '准备账号',
+  validate: '校验账号',
+  'mailbox.prepare': '准备目标邮箱',
+  'protocol.login': '协议登录',
+  eligibility: '换绑资格检查',
+  mfa: 'MFA 检查',
+  begin: '发起换绑',
+  'otp.read': '读取验证码',
+  verify: '确认换绑',
+  'database.update': '更新本地记录',
+}
+
+function bulkPhaseLabel(stage) {
+  return BULK_PHASE_LABELS[stage] || stage || '等待'
+}
+
+function bulkLastPhase(row) {
+  const phases = Array.isArray(row?.phases) ? row.phases : []
+  const phase = phases[phases.length - 1]
+  if (!phase) return { text: '等待', status: 'info', count: 0 }
+  return {
+    text: `${bulkPhaseLabel(phase.stage)} · ${phase.status}`,
+    status: phase.status === 'failed' ? 'danger' : phase.status === 'ok' ? 'success' : 'warning',
+    count: phases.length,
+  }
+}
+
+function clearBulkRebindTimer() {
+  if (bulkRebindTimer !== null) {
+    clearTimeout(bulkRebindTimer)
+    bulkRebindTimer = null
+  }
+}
+
+function openBulkRebind() {
+  const sources = selectedICloudRows.value.map((row) => row.email)
+  if (!sources.length) {
+    ElMessage.info('请先勾选至少一个 iCloud 注册结果')
+    return
+  }
+  clearBulkRebindTimer()
+  bulkRebindSources.value = sources
+  bulkRebindOtpTimeout.value = Math.max(60, Number(form.value.otpTimeout) || 180)
+  bulkRebindJob.value = null
+  bulkRebindVisible.value = true
+}
+
+async function pollBulkRebind(jobId) {
+  clearBulkRebindTimer()
+  try {
+    const job = await getBulkRebindEmail(jobId)
+    bulkRebindJob.value = job
+    if (!['done', 'failed'].includes(job.status)) {
+      bulkRebindTimer = setTimeout(() => pollBulkRebind(jobId), 1200)
+      return
+    }
+    await load()
+    selected.value = []
+    runtime.bumpData()
+    if (job.failed) {
+      ElMessage.warning(`批量换绑完成：成功 ${job.succeeded} 个，失败 ${job.failed} 个`)
+    } else {
+      ElMessage.success(`批量换绑完成：成功 ${job.succeeded} 个`)
+    }
+  } catch (e) {
+    ElMessage.error('读取批量换绑进度失败: ' + e.message)
+    if (!bulkRebindFinished.value) {
+      bulkRebindTimer = setTimeout(() => pollBulkRebind(jobId), 2000)
+    }
+  }
+}
+
+async function submitBulkRebind() {
+  const sources = bulkRebindSources.value
+  if (!sources.length) return
+  if (!(await confirm(
+    `确认批量换绑 ${sources.length} 个 iCloud 账号？\n\n` +
+    '任务将按顺序执行协议登录、验证码读取和域名邮箱换绑；目标邮箱会为每个账号自动生成。',
+  ))) return
+
+  bulkRebindLoading.value = true
+  try {
+    const job = await startBulkRebindEmail({
+      source_emails: sources,
+      proxy: proxyText(form.value),
+      otp_timeout: Math.max(60, Math.min(600, Number(bulkRebindOtpTimeout.value) || 180)),
+    })
+    bulkRebindJob.value = job
+    await pollBulkRebind(job.job_id)
+  } catch (e) {
+    ElMessage.error('启动批量换绑失败: ' + e.message)
+  } finally {
+    bulkRebindLoading.value = false
+  }
+}
+
+// ──────────── 批量导出 ────────────
+// 格式清单来自后端 export_formats.py，下拉菜单是 v-for 出来的：
+// 以后加格式只改后端那一个文件，这里一行都不用动。
+const exportFormats = ref([])
+const exporting = ref(false)
+const exportVisible = ref(false)
+const exportText = ref('')
+const exportCount = ref(0)
+const exportFilename = ref('')
+const exportLabel = ref('')
+// 这一批导出的到底是哪些号 —— 「下载并删除」照着它删，来自后端 r.emails。
+// 为什么要后端给、为什么在导出那一刻就存下来：
+//   · 「导出全部」是跨页的，前端手里只有当前页 20 行，自己凑必漏；
+//   · 弹窗开着的时候主人可能改勾选、翻页，后台自动跑号还会插进新号进来，
+//     那时再去读 selected/表格，删的就不是刚下载的那批了。
+const exportedEmails = ref([])
+const deletingExported = ref(false)
+
+const exportBtnText = computed(() =>
+  selected.value.length ? `导出选中 (${selected.value.length})` : '导出全部',
+)
+
+async function loadExportFormats() {
+  if (exportFormats.value.length) return
+  try {
+    const { formats } = await listExportFormats()
+    exportFormats.value = formats || []
+  } catch (e) { ElMessage.error('加载导出格式失败: ' + e.message) }
+}
+
+async function doExport(fmt) {
+  const emails = selected.value.map((r) => r.email)
+  // 没勾选 = 导出全部（跨页，不只当前页）
+  const payload = emails.length ? { format: fmt.id, emails } : { format: fmt.id, all: true }
+  exporting.value = true
+  try {
+    const r = await exportRegistered(payload)
+    exportedEmails.value = (r.emails || []).filter(Boolean)
+    // download 模式（CPA zip / SUB2API json）：不弹预览，直接落盘
+    if (r.mode === 'download') {
+      saveBlob(b64ToBytes(r.b64), r.filename, r.mime)
+      ElMessage.success(`已下载 ${r.filename}（${r.count} 个号）`)
+      return
+    }
+    exportText.value = r.text || ''
+    exportCount.value = r.count || 0
+    exportFilename.value = r.filename || 'export.txt'
+    exportLabel.value = r.label || fmt.label
+    exportVisible.value = true
+  } catch (e) { ElMessage.error('导出失败: ' + e.message) }
+  finally { exporting.value = false }
+}
+
+function b64ToBytes(b64) {
+  const bin = atob(b64 || '')
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return bytes
+}
+
+function saveBlob(data, filename, mime) {
+  const blob = data instanceof Blob ? data : new Blob([data], { type: mime || 'application/octet-stream' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+function downloadExport() {
+  saveBlob(exportText.value, exportFilename.value, 'text/plain;charset=utf-8')
+}
+
+// ──────────── 下载并删除 ────────────
+// 主人的原话：「不然分不清楚越堆越多」。导出的 txt 里邮箱/密码/2FA/取件url 都齐了，
+// 这两张表就没有留存价值了，一起清掉。
+//
+// ⚠️ 顺序**必须**是「先下载、再确认、最后删」：
+//    删库是不可恢复的，而浏览器下载可能被拦（弹窗拦截 / 用户点了取消 / 磁盘满）。
+//    先把文件落盘再问，主人是在**手里已经有 txt** 的前提下点的确认。
+//    确认框里再报一遍将要删的两张表各多少条，删完之前还有最后一次反悔机会。
+async function downloadAndDelete() {
+  downloadExport()
+
+  const emails = exportedEmails.value
+  if (!emails.length) {
+    ElMessage.warning('这批导出没有拿到 email 列表，只下载不删除')
+    return
+  }
+
+  const ok = await confirm(
+    `已下载 ${exportFilename.value}。\n\n` +
+    `现在删除这 ${emails.length} 个号：\n` +
+    `  · 注册结果（凭证、2FA secret）\n` +
+    `  · 邮箱列表（号池那一行，含取件链接）\n\n` +
+    `删掉后只剩刚下载的 txt 这一份，不可恢复。确定？`,
+  )
+  if (!ok) return
+
+  deletingExported.value = true
+  try {
+    // 两张表分别删。先删注册结果：它是主人真正在看的那张表，
+    // 万一号池那边报错（比如这批号根本不是号池导入的、压根没有对应行），
+    // 至少结果表已经清干净了，不会出现"删了一半还看得见"。
+    const r1 = await bulkDeleteRegistered({ emails })
+    let poolDeleted = 0
+    try {
+      const r2 = await bulkDeleteAccounts({ emails })
+      poolDeleted = r2.deleted || 0
+    } catch (e) {
+      // 号池删失败不算整体失败：凭证已经清掉了，主人该知道的是号池还剩着
+      ElMessage.warning('注册结果已删，但邮箱列表删除失败: ' + e.message)
+    }
+    ElMessage.success(`已删除：注册结果 ${r1.deleted} 条 / 邮箱列表 ${poolDeleted} 条`)
+    exportVisible.value = false
+    exportedEmails.value = []
+    selected.value = []
+    load(true)          // 回第一页：这一批没了，停在旧页码多半是空页
+    runtime.bumpData()  // 通知「邮箱列表」那一页也刷新，否则主人切过去还看得到已删的号
+  } catch (e) {
+    ElMessage.error('删除失败: ' + e.message)
+  } finally {
+    deletingExported.value = false
+  }
+}
+
+// 凭证弹窗
+const credVisible = ref(false)
+const credEmail = ref('')
+const credData = ref(null)
+// totp_secret 放最前：它是唯一「服务端取不回」的字段，弹窗一打开就要能看到
+const CRED_KEYS = ['totp_secret', 'totp_factor_id', 'access_token', 'session_token', 'refresh_token', 'id_token', 'device_id', 'csrf_token', 'cookie_header', 'password']
+const credRows = computed(() => {
+  if (!credData.value) return []
+  return CRED_KEYS.filter((k) => credData.value[k]).map((k) => ({ key: k, val: credData.value[k] }))
+})
+async function viewCred(email) {
+  try {
+    const { data } = await getRegistered(email)
+    credData.value = data
+    credEmail.value = email
+    credVisible.value = true
+  } catch (e) { ElMessage.error('加载凭证失败: ' + e.message) }
+}
+async function copyCell(email, field) {
+  try {
+    const { data } = await getRegistered(email)
+    const val = data[field] || ''
+    if (!val) { ElMessage.warning(`${field} 为空`); return }
+    await copyText(val)
+  } catch (e) { ElMessage.error('加载凭证失败: ' + e.message) }
+}
+function copyAllJson() {
+  if (credData.value) copyText(JSON.stringify(credData.value, null, 2))
+}
+
+// ── 手动编辑凭证 ──
+// 只改本地库，不同步 OpenAI。改完的值会被登录流程直接用上
+// （registrar 的 account_callback 走 db.get_registered，不区分数据来源）。
+const editVisible = ref(false)
+const editSaving = ref(false)
+const editEmail = ref('')
+const editPassword = ref('')
+const editSecret = ref('')
+// 打开弹窗时的原值，用来判断哪些字段真被改过（没改的不传，后端就不碰）
+const editOrigPassword = ref('')
+const editOrigSecret = ref('')
+
+function openEdit(row) {
+  editEmail.value = row.email
+  editPassword.value = row.password || ''
+  editSecret.value = row.totp_secret || ''
+  editOrigPassword.value = row.password || ''
+  editOrigSecret.value = row.totp_secret || ''
+  editVisible.value = true
+}
+
+async function saveEdit() {
+  const pw = editPassword.value
+  const sec = editSecret.value.trim()
+  const payload = { email: editEmail.value }
+  // 只把真正改动过的字段传给后端 —— 没动的字段不传，后端就不会碰它
+  if (pw !== editOrigPassword.value) payload.password = pw
+  if (sec !== editOrigSecret.value) payload.totp_secret = sec
+  if (payload.password === undefined && payload.totp_secret === undefined) {
+    ElMessage.info('没有改动')
+    editVisible.value = false
+    return
+  }
+  // secret 是唯一「服务端取不回」的凭证：覆盖掉原值 = 该号 2FA 永久锁死。
+  // 只在「原本就有 secret」且「确实要改」时拦一道，新填不打扰。
+  if (payload.totp_secret !== undefined && editOrigSecret.value) {
+    try {
+      await ElMessageBox.confirm(
+        `该账号已有 2FA secret：\n${editOrigSecret.value}\n\n` +
+        '覆盖后原 secret 将永久丢失，服务端取不回。\n' +
+        '若原 secret 仍是账号上生效的那个，覆盖会导致该号 2FA 永远登不上。',
+        '确认覆盖 2FA secret？',
+        { type: 'warning', confirmButtonText: '确认覆盖', cancelButtonText: '取消' },
+      )
+    } catch { return }
+  }
+  editSaving.value = true
+  try {
+    const r = await updateCredentials(payload)
+    ElMessage.success(`已保存：${(r.changed || []).join(' + ') || '无改动'}`)
+    editVisible.value = false
+    await load()
+  } catch (e) {
+    // 后端 400 会带具体原因（如「TOTP secret 含非法字符」），原样透出
+    ElMessage.error('保存失败: ' + (e.response?.data?.detail || e.message))
+  } finally { editSaving.value = false }
+}
+
+watch(page, () => load())
+watch(dataVersion, () => load())
+onActivated(() => load())
+onBeforeUnmount(clearBulkRebindTimer)
+</script>
+<template>
+  <div class="page">
+    <el-card shadow="never">
+      <template #header><span class="section-title" style="margin: 0">注册结果</span></template>
+
+      <el-space wrap style="margin-bottom: 12px">
+        <el-button @click="load(false)"><el-icon><Refresh /></el-icon>刷新</el-button>
+        <el-select v-model="filter" style="width: 130px" @change="load(true)">
+          <el-option label="全部" value="all" />
+          <el-option label="有 RT" value="has_rt" />
+          <el-option label="无 RT" value="no_rt" />
+          <el-option label="未检测" value="unchecked" />
+          <el-option label="Free" value="free" />
+          <el-option label="可领Plus" value="plus" />
+          <el-option label="已封号" value="banned" />
+          <el-option label="凭证失效" value="token_invalid" />
+        </el-select>
+        <el-select
+          v-model="form.proxy" filterable clearable allow-create default-first-option
+          :reserve-keyword="false" placeholder="检测代理（留空直连）"
+          style="width: 260px"
+        >
+          <el-option v-for="p in proxyList" :key="p" :label="p" :value="p" />
+        </el-select>
+        <el-button :loading="checking" @click="doCheck('unchecked')">检查未检测</el-button>
+        <el-button :loading="checking" @click="doCheck('all')">重新检查</el-button>
+        <el-button :loading="checking" :disabled="!selected.length" @click="doCheck('selected')">
+          检测选中 ({{ selected.length }})
+        </el-button>
+        <el-divider direction="vertical" />
+        <el-button
+          type="primary"
+          data-testid="bulk-rebind-email-button"
+          :disabled="Boolean(bulkRebindJob && !bulkRebindFinished)"
+          @click="openBulkRebind"
+        >
+          <el-icon><Switch /></el-icon>
+          批量协议换绑域名邮箱
+        </el-button>
+        <el-tag
+          data-testid="bulk-rebind-selection-count"
+          :type="selectedICloudRows.length ? 'success' : 'info'"
+          effect="plain"
+          size="small"
+        >
+          iCloud 已选 {{ selectedICloudRows.length }}
+        </el-tag>
+        <el-dropdown trigger="click" @command="doExport" @visible-change="(v) => v && loadExportFormats()">
+          <el-button :loading="exporting">
+            <el-icon><Download /></el-icon>{{ exportBtnText }}
+            <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item v-for="f in exportFormats" :key="f.id" :command="f" :divided="f.mode === 'download' && f.id === 'cpa'">
+                {{ f.label }}
+                <span v-if="f.note" class="hint" style="margin-left: 6px">{{ f.note }}</span>
+              </el-dropdown-item>
+              <el-dropdown-item v-if="!exportFormats.length" disabled>加载中...</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+        <el-button type="danger" plain :disabled="!selected.length" @click="deleteSelected">
+          删除选中 ({{ selected.length }})
+        </el-button>
+        <el-button type="danger" plain @click="deleteAll">清空全部</el-button>
+        <span class="hint">{{ checkResult }}</span>
+      </el-space>
+
+      <el-skeleton v-if="loading && !rows.length" :rows="6" animated style="padding: 8px 0" />
+      <el-table
+        v-else
+        v-loading="loading" :data="rows" size="small" stripe
+        @selection-change="(v) => (selected = v)"
+      >
+        <el-table-column type="selection" width="44" />
+        <el-table-column prop="email" label="邮箱" min-width="200" show-overflow-tooltip />
+        <!-- 密码直接明文列出：随机 16 位，是登录账号的必需品，
+             藏进「查看凭证」弹窗每次都要多点两下。列表接口本来就在返回它。
+             图标放在文字**后面**：放前面会把值整体右推 27px（见 .cell-copy 注释）。 -->
+        <el-table-column label="密码" min-width="170">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.password" size="small" text type="primary"
+              class="cell-copy mono" @click="copyText(row.password)"
+            >
+              {{ row.password }}<el-icon class="ico"><CopyDocument /></el-icon>
+            </el-button>
+            <span v-else class="hint">—</span>
+          </template>
+        </el-table-column>
+        <!-- 2FA secret 同样明文列出：它是唯一「服务端取不回」的凭证，
+             丢了这个号就永久锁死，必须一眼看见、一点就能复制。
+             min-width 必须装得下 32 位 base32：.cell 带 overflow:hidden，
+             宽度不够会**无声截断**，肉眼核对时看到的是残缺值。实测需 ~250px。 -->
+        <el-table-column label="2FA" min-width="260">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.totp_secret" size="small" text type="warning"
+              class="cell-copy mono" @click="copyText(row.totp_secret)"
+            >
+              {{ row.totp_secret }}<el-icon class="ico"><CopyDocument /></el-icon>
+            </el-button>
+            <span v-else class="hint">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="Plus状态" width="120">
+          <template #default="{ row }">
+            <StatusDot v-if="plusOf(row)" :type="PLUS_TYPE[plusOf(row).status] || 'info'" :text="plusOf(row).label" />
+            <span v-else class="hint">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="access" width="100" align="center">
+          <template #default="{ row }">
+            <el-button v-if="row.at_len > 0" size="small" text type="primary" @click="copyCell(row.email, 'access_token')">
+              <el-icon><CopyDocument /></el-icon>{{ row.at_len }}
+            </el-button>
+            <span v-else class="hint">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="session" width="100" align="center">
+          <template #default="{ row }">
+            <el-button v-if="row.st_len > 0" size="small" text type="primary" @click="copyCell(row.email, 'session_token')">
+              <el-icon><CopyDocument /></el-icon>{{ row.st_len }}
+            </el-button>
+            <span v-else class="hint">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="refresh" width="100" align="center">
+          <template #default="{ row }">
+            <el-button v-if="row.rt_len > 0" size="small" text type="primary" @click="copyCell(row.email, 'refresh_token')">
+              <el-icon><CopyDocument /></el-icon>{{ row.rt_len }}
+            </el-button>
+            <span v-else class="hint">—</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="时间" width="160">
+          <template #default="{ row }">{{ fmtTime(row.created_at) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="300" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" text @click="viewCred(row.email)">查看凭证</el-button>
+            <el-button size="small" text type="warning" @click="openEdit(row)">编辑</el-button>
+            <el-button
+              v-if="isICloudRow(row)"
+              size="small" text type="primary" @click="openRebind(row)"
+            >换绑域名邮箱</el-button>
+            <el-button size="small" text type="danger" @click="deleteOne(row.email)">删除</el-button>
+          </template>
+        </el-table-column>
+        <template #empty>
+          <el-empty description="暂无注册结果，去「单次注册」或「全自动批量」跑号" :image-size="70" />
+        </template>
+      </el-table>
+      <div style="display: flex; justify-content: center; margin-top: 14px">
+        <el-pagination
+          v-model:current-page="page" :page-size="PAGE_SIZE" :total="total"
+          layout="prev, pager, next, total" background
+        />
+      </div>
+
+      <el-dialog v-model="exportVisible" width="720px" top="8vh">
+        <template #header>
+          <div style="display: flex; align-items: center; gap: 12px">
+            <span style="font-weight: 600">导出 · {{ exportLabel }}</span>
+            <el-tag size="small" type="info">共 {{ exportCount }} 行</el-tag>
+          </div>
+        </template>
+        <el-input
+          :model-value="exportText" type="textarea" :rows="14" readonly
+          class="mono export-area"
+        />
+        <template #footer>
+          <el-button @click="copyText(exportText)">
+            <el-icon><CopyDocument /></el-icon>复制全部
+          </el-button>
+          <el-button type="primary" @click="downloadExport">
+            <el-icon><Download /></el-icon>下载 {{ exportFilename }}
+          </el-button>
+          <!-- 危险动作放最右、danger 色，和左边的纯下载拉开距离，避免手滑。
+               先下载文件、再弹二次确认，确认框里会报清楚要删哪两张表各多少条。 -->
+          <el-button
+            type="danger" plain
+            :loading="deletingExported"
+            :disabled="!exportedEmails.length"
+            @click="downloadAndDelete"
+          >
+            <el-icon><Delete /></el-icon>下载并删除这 {{ exportedEmails.length }} 个号
+          </el-button>
+        </template>
+      </el-dialog>
+
+      <el-dialog v-model="credVisible" :title="credEmail" width="760px" top="6vh">
+        <template #header>
+          <div style="display: flex; align-items: center; gap: 12px">
+            <span class="mono" style="font-weight: 600">{{ credEmail }}</span>
+            <el-button size="small" @click="copyAllJson">复制全部 JSON</el-button>
+          </div>
+        </template>
+        <div v-for="r in credRows" :key="r.key" style="margin-bottom: 12px">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px">
+            <span class="mono" style="font-weight: 600; color: var(--dango-pink-dark)">{{ r.key }}</span>
+            <el-tag size="small" type="info">len={{ r.val.length }}</el-tag>
+            <el-button size="small" @click="copyText(r.val)">复制</el-button>
+          </div>
+          <el-input :model-value="r.val" type="textarea" :rows="2" readonly class="mono" />
+        </div>
+        <el-empty v-if="!credRows.length" description="无凭证字段" />
+      </el-dialog>
+
+      <!-- 手动编辑凭证：把外部已知的密码/2FA 补进来，或修正记录错误 -->
+      <el-dialog v-model="editVisible" title="编辑凭证" width="560px" top="10vh">
+        <el-alert
+          type="warning" :closable="false" show-icon style="margin-bottom: 16px"
+          title="仅修改本地记录，不会同步到 OpenAI"
+          description="这里改密码不等于改了账号密码。填入的值会被登录流程直接使用。"
+        />
+        <el-form label-position="top">
+          <el-form-item label="邮箱">
+            <el-input :model-value="editEmail" class="mono" disabled />
+          </el-form-item>
+          <el-form-item label="密码">
+            <el-input v-model="editPassword" class="mono" placeholder="留空表示该号无密码" />
+          </el-form-item>
+          <el-form-item label="2FA Secret">
+            <el-input
+              v-model="editSecret" class="mono"
+              placeholder="base32，支持带空格/小写/otpauth:// 链接，会自动规范化"
+            />
+            <div class="hint" style="margin-top: 6px; line-height: 1.6">
+              服务端取不回此值，覆盖后原 secret 永久丢失。清空则该号按无 2FA 处理。
+            </div>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="editVisible = false">取消</el-button>
+          <el-button type="primary" :loading="editSaving" @click="saveEdit">保存</el-button>
+        </template>
+      </el-dialog>
+
+      <el-dialog v-model="rebindVisible" title="换绑域名邮箱" width="560px" top="10vh">
+        <el-alert
+          type="info" :closable="false" show-icon style="margin-bottom: 16px"
+          title="手动操作"
+          description="此操作只在点击确认后执行，不会在注册完成后自动换绑。"
+        />
+        <el-form label-position="top">
+          <el-form-item label="源 iCloud 邮箱">
+            <el-input :model-value="rebindSource" class="mono" disabled />
+          </el-form-item>
+          <el-form-item label="目标域名邮箱">
+            <el-input
+              v-model="rebindTarget" class="mono"
+              placeholder="留空 = 自动生成已配置域名的邮箱"
+              clearable
+            />
+          </el-form-item>
+          <el-form-item label="验证码等待时间（秒）">
+            <el-input-number v-model="rebindOtpTimeout" :min="60" :max="600" :step="30" />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="rebindVisible = false">取消</el-button>
+          <el-button type="primary" :loading="rebindLoading" @click="submitRebind">确认换绑</el-button>
+        </template>
+      </el-dialog>
+
+      <el-dialog
+        v-model="bulkRebindVisible"
+        title="批量协议换绑域名邮箱"
+        width="760px"
+        top="8vh"
+        :close-on-click-modal="!bulkRebindRunning"
+        :close-on-press-escape="!bulkRebindRunning"
+        :show-close="!bulkRebindRunning"
+      >
+        <el-alert
+          v-if="!bulkRebindJob"
+          type="info" :closable="false" show-icon style="margin-bottom: 16px"
+          title="仅在点击开始后执行"
+          description="任务按选中顺序逐个执行协议登录、验证码读取和域名邮箱换绑；目标邮箱留空时为每个账号自动生成。"
+        />
+        <el-alert
+          v-else-if="bulkRebindRunning"
+          type="warning" :closable="false" show-icon style="margin-bottom: 16px"
+          title="批量任务执行中"
+          description="当前任务按顺序运行，关闭和重复提交已锁定；单个账号失败后会继续处理后续账号。"
+        />
+        <el-alert
+          v-else
+          :type="bulkRebindJob.failed ? 'warning' : 'success'"
+          :closable="false" show-icon style="margin-bottom: 16px"
+          :title="bulkRebindJob.failed ? '批量任务已完成，部分账号失败' : '批量任务已完成'"
+          :description="`成功 ${bulkRebindJob.succeeded} 个，失败 ${bulkRebindJob.failed} 个。失败项可根据错误信息单独重试。`"
+        />
+
+        <el-form v-if="!bulkRebindJob" label-position="top">
+          <el-form-item label="本次选中的 iCloud 邮箱">
+            <div class="bulk-source-list">
+              <el-tag v-for="email in bulkRebindSources" :key="email" class="mono" size="small">
+                {{ email }}
+              </el-tag>
+            </div>
+          </el-form-item>
+          <el-form-item label="验证码等待时间（秒）">
+            <el-input-number v-model="bulkRebindOtpTimeout" :min="60" :max="600" :step="30" />
+            <span class="hint" style="margin-left: 10px">每个账号单独等待，留空目标邮箱自动生成</span>
+          </el-form-item>
+        </el-form>
+
+        <template v-if="bulkRebindJob">
+          <div class="bulk-progress-summary">
+            <div>
+              <strong>{{ bulkRebindJob.completed }} / {{ bulkRebindJob.total }}</strong>
+              <span class="hint" style="margin-left: 8px">已完成</span>
+            </div>
+            <div class="bulk-progress-counts">
+              <el-tag type="success" size="small">成功 {{ bulkRebindJob.succeeded }}</el-tag>
+              <el-tag type="danger" size="small">失败 {{ bulkRebindJob.failed }}</el-tag>
+            </div>
+          </div>
+          <el-progress
+            :percentage="bulkRebindPercent"
+            :status="bulkRebindFinished ? (bulkRebindJob.failed ? 'warning' : 'success') : undefined"
+            :stroke-width="10"
+          />
+          <div v-if="bulkRebindJob.current" class="hint" style="margin-top: 8px">
+            当前处理：<span class="mono">{{ bulkRebindJob.current }}</span>
+            <span v-if="bulkRebindJob.current_phase" style="margin-left: 10px">
+              阶段：{{ bulkPhaseLabel(bulkRebindJob.current_phase) }}
+            </span>
+          </div>
+          <el-table :data="bulkRebindJob.results" size="small" stripe style="margin-top: 14px" max-height="320">
+            <el-table-column prop="source_email" label="源邮箱" min-width="190" show-overflow-tooltip />
+            <el-table-column prop="target_email" label="目标邮箱" min-width="190" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span v-if="row.target_email" class="mono">{{ row.target_email }}</span>
+                <span v-else class="hint">—</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="90" align="center">
+              <template #default="{ row }">
+                <el-tag :type="bulkResultType(row.status)" size="small">
+                  {{ bulkResultLabel(row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="最近阶段" min-width="150" show-overflow-tooltip>
+              <template #default="{ row }">
+                <el-tag :type="bulkLastPhase(row).status" size="small" effect="plain">
+                  {{ bulkLastPhase(row).text }}
+                </el-tag>
+                <span class="hint phase-count">{{ bulkLastPhase(row).count }} 条</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="错误 / 耗时" min-width="190" show-overflow-tooltip>
+              <template #default="{ row }">
+                <span v-if="row.error" class="error-text">{{ row.error }}</span>
+                <span v-else-if="row.duration_ms" class="hint">{{ row.duration_ms }} ms</span>
+                <span v-else class="hint">—</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </template>
+
+        <template #footer>
+          <el-button :disabled="bulkRebindRunning" @click="bulkRebindVisible = false">
+            {{ bulkRebindFinished ? '关闭' : '取消' }}
+          </el-button>
+          <el-button
+            v-if="!bulkRebindJob"
+            type="primary"
+            :loading="bulkRebindLoading"
+            :disabled="!bulkRebindSources.length"
+            @click="submitBulkRebind"
+          >开始批量换绑</el-button>
+        </template>
+      </el-dialog>
+    </el-card>
+  </div>
+</template>
+
+<style scoped>
+/* 表格里「点一下就复制」的明文单元格（密码 / 2FA secret）。
+   :deep 是必需的：.el-button 由 Element Plus 渲染，scoped 的属性选择器打不到它。
+
+   为什么要重置 padding —— Element Plus 有两个长得很像的类：
+     .el-button--text  （旧版 type="text"）  padding 左右为 0
+     .el-button.is-text（新版 text 属性）    继承 --small 的 5px 11px
+   我们用的是后者，于是 11px padding + 12px 图标 + 4px 间隙 = 值被整体右推 27px，
+   同列的表头和空值「—」都贴着 cell 左沿，一眼就看出错位。 */
+:deep(.el-button.cell-copy.el-button--small) {
+  padding: 0 6px 0 0;
+  height: 20px;
+  font-size: 12px;
+}
+/* 图标默认透明但**保留占位**：用 opacity 而不是 display:none，
+   否则 hover 时图标撑开宽度会把文字挤得左右抖。 */
+:deep(.cell-copy .ico) {
+  margin-left: 5px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+:deep(.cell-copy:hover .ico) { opacity: 0.65; }
+
+.bulk-source-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 120px;
+  overflow: auto;
+  padding: 2px;
+}
+
+.bulk-progress-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.bulk-progress-counts {
+  display: flex;
+  gap: 6px;
+}
+
+.phase-count {
+  margin-left: 6px;
+}
+
+.error-text {
+  color: var(--el-color-danger);
+}
+</style>
+
+<!-- 非 scoped：ElMessageBox 是挂到 body 上的，不在本组件的 scope 属性范围内，
+     scoped 样式打不到它。只作用在自家 customClass 上，不会污染别处的确认框。 -->
+<style>
+.confirm-multiline .el-message-box__message { white-space: pre-line; }
+</style>

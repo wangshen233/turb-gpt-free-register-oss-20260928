@@ -1,0 +1,77 @@
+# ──────────────── 敏感数据（绝对不能提交！）────────────────
+# 注册后的账号凭证 / 接码号池 / OTP 日志
+webui/webui.db
+webui/webui.db-shm
+webui/webui.db-wal
+webui/webui.db-journal
+webui/logs/
+# ⚠️ 2026-08-04 补：手动备份的 *.db.bak 之前没被拦住，
+#    `git add .` 会把整个号池（含已注册凭证）传上 GitHub。
+*.db.bak
+*.db.backup
+*.sqlite
+*.sqlite3
+run.log
+run*.log
+account_*.json
+*.session
+*.token
+
+# Outlook 4 段格式接码号（如果主人手动放过）
+mail.txt
+accounts.txt
+outlook_accounts.txt
+
+# ──────────────── Python ────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 虚拟环境
+.venv/
+.vendor/
+venv/
+env/
+ENV/
+
+# ──────────────── 测试 / 临时 ────────────────
+/tmp/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ──────────────── IDE ────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ──────────────── OS ────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ──────────────── Camoufox / Playwright 缓存（如果主人保留浏览器路径残留）────────────────
+.camoufox/
+.playwright/
+chatgpt_reg_*
+
+# ──────────────── 节点（QuickJS sentinel SDK 缓存）────────────────
+node_modules/
+openai-sentinel-demo/
+
+# ──────────────── 工作流追踪文件（如果主人启过 AUTH_TRACE_DUMP=1）────────────────
+outputs/
+auth_trace_*.jsonl
+
+# ──────────────── 配置覆盖（用户本地配置不进 repo）────────────────
+config.local.json
+.env
+.env.local
+secrets.json
